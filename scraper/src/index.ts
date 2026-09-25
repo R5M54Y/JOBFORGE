@@ -8,6 +8,7 @@ import { Validate } from './validate';
 import { Deduplicate } from './deduplicate';
 import { Database } from './db';
 import { ScrapeResult, SourceResult, RemoteOKJob, RemotiveJob } from './types';
+import { getDatabaseConfig } from './config/database';
 
 async function runSource(
   source: IJobSource,
@@ -69,10 +70,7 @@ async function runSource(
 }
 
 async function run(): Promise<ScrapeResult> {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL environment variable is required');
-  }
+  const dbConfig = getDatabaseConfig();
 
   const sources: IJobSource[] = [
     new RemoteOKSource(),
@@ -80,7 +78,7 @@ async function run(): Promise<ScrapeResult> {
   ];
 
   const sourceResults: SourceResult[] = [];
-  const db = new Database(databaseUrl);
+  const db = new Database(dbConfig.connectionString);
 
   try {
     console.log('\n=== JOBFORGE Scraper ===\n');
