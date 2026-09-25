@@ -1,15 +1,13 @@
 // JOBFORGE Frontend - Database Connection
 import { Pool } from 'pg';
+import { getDatabaseConfig } from './database-config';
 
 let pool: Pool | null = null;
 
 export function getPool(): Pool {
   if (!pool) {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error('DATABASE_URL environment variable is not set');
-    }
-    pool = new Pool({ connectionString, max: 10 });
+    const dbConfig = getDatabaseConfig();
+    pool = new Pool({ connectionString: dbConfig.connectionString, max: 10 });
   }
   return pool;
 }
