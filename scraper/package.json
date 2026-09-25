@@ -5,7 +5,8 @@
   "scripts": {
     "build": "tsc",
     "scrape": "node dist/index.js",
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "init-db": "tsx scripts/init-db.ts"
   },
   "dependencies": {
     "pg": "^8.13.0",
