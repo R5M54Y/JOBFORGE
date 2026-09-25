@@ -66,63 +66,64 @@ Job Search / Filtering
 Original Job URL
 ```
 
-## Job Source
+## Job Sources
 
-**MVP Requirement:** Exactly ONE production job source
+**Current Production Sources:**
 
 ```
-RemoteOK
+RemoteOK (https://remoteok.com/api)
+Remotive (https://remotive.com/api/remote-jobs)
 ```
 
-**DO NOT implement:** GitHub Jobs, LinkedIn, Indeed, Glassdoor, or other additional sources.
+**Architecture:** Multi-source with extensible IJobSource interface. Each source normalizes into the common Job model.
 
-The source architecture should allow for future addition of other sources, but only RemoteOK is part of the MVP.
+**Historical Note:** MVP baseline (commit 3aea164) was RemoteOK only. Remotive was added in commit fd03243 as the second source, preserving full backward compatibility.
 
 ## Database Requirements
 
 **Technology:** PostgreSQL
 
 **Job Table Schema Requirements:**
-|- `id` - Unique job identifier
-|- `source` - Source identifier (always 'remoteok')
-|- `sourceJobId` - RemoteOK job ID
-|- `title` - Job title
-|- `company` - Company name
-|- `location` - Job location
-|- `description` - Job description
-|- `url` - Job application URL
-|- `category` - Job category
-|- `employmentType` - Employment type (full-time, part-time, etc.)
-|- `postedAt` - Job posting date
-|- `scrapedAt` - When job was scraped
-|- `expiresAt` - Job expiration date
-|- `isActive` - Job active status
-|- `createdAt` - Record creation timestamp
-|- `updatedAt` - Record last update timestamp
+- `id` - Unique job identifier
+- `source` - Source identifier ('remoteok' or 'remotive')
+- `sourceJobId` - Source-native job ID
+- `title` - Job title
+- `company` - Company name
+- `location` - Job location
+- `description` - Job description
+- `url` - Job application URL
+- `category` - Job category
+- `employmentType` - Employment type (full-time, part-time, etc.)
+- `postedAt` - Job posting date
+- `scrapedAt` - When job was scraped
+- `expiresAt` - Job expiration date
+- `isActive` - Job active status
+- `createdAt` - Record creation timestamp
+- `updatedAt` - Record last update timestamp
 
-**Required Constraint:** UNIQUE(source, sourceJobId) to prevent duplicate jobs
+**Required Constraint:** UNIQUE(source, sourceJobId) to prevent duplicate jobs from the same source
 
-**Scaper Requirement:** Must use upsert strategy compatible with the uniqueness rule
+**Scraper Requirement:** Must use upsert strategy compatible with the uniqueness rule
 
 ## Job Data Model
 
 ### Required Fields:
-|- `id` (string, required)
-|- `source` (string, required, always 'remoteok')
-|- `sourceJobId` (string, required)
-|- `title` (string, required)
-|- `company` (string, required)
-|- `location` (string, required)
-|- `description` (string, optional)
-|- `url` (string, required)
-|- `category` (string, optional)
-|- `employmentType` (string, optional)
-|- `postedAt` (Date, required)
-|- `scrapedAt` (Date, required)
-|- `expiresAt` (Date, optional)
-|- `isActive` (boolean, required, default: true)
-|- `createdAt` (Date, required)
-|- `updatedAt` (Date, required)
+- `id` (string, required)
+- `source` (string, required, 'remoteok' or 'remotive')
+- `sourceJobId` (string, required)
+- `title` (string, required)
+- `company` (string, required)
+- `location` (string, required)
+- `description` (string, optional)
+- `url` (string, required)
+- `category` (string, optional)
+- `employmentType` (string, optional)
+- `postedAt` (Date, required)
+- `scrapedAt` (Date, required)
+- `expiresAt` (Date, optional)
+- `isActive` (boolean, required, default: true)
+- `createdAt` (Date, required)
+- `updatedAt` (Date, required)
 
 ## Job Deduplication
 
@@ -135,24 +136,28 @@ The source architecture should allow for future addition of other sources, but o
 ## Scraper Pipeline
 
 ```
-FETCH
-→ NORMALIZE
-→ VALIDATE
-→ DEDUPLICATE
-→ UPSERT
+FOR EACH SOURCE (RemoteOK, Remotive):
+  FETCH
+  → NORMALIZE
+  → VALIDATE
+  → DEDUPLICATE
+  → UPSERT
 ```
 
 ### Responsibilities:
 
 #### Fetch
-|- Retrieve jobs from RemoteOK API
-|- Configure proper User-Agent for API compliance
-|- Handle API errors and network issues
+- Retrieve jobs from RemoteOK API (https://remoteok.com/api)
+- Retrieve jobs from Remotive API (https://remotive.com/api/remote-jobs)
+- Configure proper User-Agent for API compliance
+- Handle API errors and network issues
+- Source failures are isolated (one source failure doesn't stop the other)
 
 #### Normalize
-|- Convert RemoteOK records into JOBFORGE job model
-|- Map RemoteOK fields to JOBFORGE schema
-|- Generate consistent job IDs
+- Convert RemoteOK records into JOBFORGE job model
+- Convert Remotive records into JOBFORGE job model
+- Map source-specific fields to JOBFORGE schema
+- Generate consistent job IDs: `{source}-{sourceJobId}`
 
 #### Validate
 |- Reject records missing required fields:
