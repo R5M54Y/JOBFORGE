@@ -17,7 +17,7 @@
 
 ## 2. DEPLOYMENT PLATFORM
 
-**Intended Platform:** Vercel (documented in PRODUCTION_DEPLOYMENT_FINAL.md)
+**Intended Platform:** Vercel
 
 **Status:** ⚠️ NOT AVAILABLE
 

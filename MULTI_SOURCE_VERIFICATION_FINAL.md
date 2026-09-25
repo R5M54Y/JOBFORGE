@@ -560,7 +560,7 @@ Architecture: Multi-source abstraction with IJobSource interface
 
 ### For Immediate Cloud Deployment
 
-**No changes required beyond baseline deployment (PRODUCTION_DEPLOYMENT_FINAL.md):**
+**No changes required beyond baseline deployment:**
 
 1. Deploy to Vercel (same as before)
 2. Configure DATABASE_URL secret (same as before)
