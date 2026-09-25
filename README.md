@@ -1,12 +1,19 @@
 # JOBFORGE
 
-Remote job aggregation platform. Automatically collects job listings from RemoteOK and presents them in a clean, searchable web interface.
+Remote job aggregation platform. Automatically collects job listings from multiple sources and presents them in a clean, searchable web interface.
 
 ## Architecture
 
 ```
-RemoteOK API → Scraper → PostgreSQL → Next.js API → Frontend
+RemoteOK API ──┐
+               ├──→ Scraper → PostgreSQL → Next.js API → Frontend
+Remotive API ──┘
 ```
+
+## Job Sources
+
+- **RemoteOK** (https://remoteok.com/api)
+- **Remotive** (https://remotive.com/api/remote-jobs)
 
 ## Setup
 

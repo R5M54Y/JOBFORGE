@@ -1,5 +1,5 @@
 // JOBFORGE Scraper - Normalize Module
-import { RemoteOKJob, Job } from './types';
+import { RemoteOKJob, RemotiveJob, Job } from './types';
 
 export class Normalize {
   static fromRemoteOK(raw: RemoteOKJob): Job {
@@ -53,7 +53,53 @@ export class Normalize {
       try {
         results.push(this.fromRemoteOK(raw));
       } catch (err) {
-        console.warn(`Normalize skip job id=${raw.id}: ${err}`);
+        console.warn(`Normalize skip RemoteOK job id=${raw.id}: ${err}`);
+      }
+    }
+    return results;
+  }
+
+  static fromRemotive(raw: RemotiveJob): Job {
+    const now = new Date();
+    const sourceJobId = String(raw.id);
+
+    let postedAt: Date;
+    try {
+      postedAt = raw.publication_date ? new Date(raw.publication_date) : now;
+      if (isNaN(postedAt.getTime())) postedAt = now;
+    } catch {
+      postedAt = now;
+    }
+
+    const location = raw.candidate_required_location || 'Remote';
+
+    return {
+      id: `remotive-${sourceJobId}`,
+      source: 'remotive',
+      sourceJobId,
+      title: (raw.title || '').trim(),
+      company: (raw.company_name || '').trim(),
+      location: location.trim(),
+      description: (raw.description || '').trim(),
+      url: raw.url || '',
+      category: (raw.category || raw.tags?.[0] || 'other').trim(),
+      employmentType: (raw.job_type || 'full_time').trim().toLowerCase().replace('_', '-'),
+      postedAt,
+      scrapedAt: now,
+      expiresAt: null,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  static fromRemotiveMany(rawJobs: RemotiveJob[]): Job[] {
+    const results: Job[] = [];
+    for (const raw of rawJobs) {
+      try {
+        results.push(this.fromRemotive(raw));
+      } catch (err) {
+        console.warn(`Normalize skip Remotive job id=${raw.id}: ${err}`);
       }
     }
     return results;
