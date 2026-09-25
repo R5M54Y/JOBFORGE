@@ -1,9 +1,10 @@
 // JOBFORGE Scraper - Type Definitions
 
 export interface RemoteOKJob {
-  id: number;
-  url: string;
-  title: string;
+  id: string | number;
+  url?: string;
+  position?: string;
+  title?: string;
   company: string;
   company_logo: string;
   category: string;
@@ -19,6 +20,7 @@ export interface RemoteOKJob {
   created_at?: string;
   date?: string;
   company_logo_url?: string;
+  epoch?: number;
   [key: string]: unknown;
 }
 

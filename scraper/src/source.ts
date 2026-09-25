@@ -30,7 +30,7 @@ export class Source {
         typeof item === 'object' &&
         item !== null &&
         'id' in item &&
-        'title' in (item as Record<string, unknown>)
+        ('position' in (item as Record<string, unknown>) || 'title' in (item as Record<string, unknown>))
     );
 
     console.log(`Fetched ${jobs.length} raw jobs from RemoteOK (filtered from ${data.length} items)`);

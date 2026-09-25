@@ -22,11 +22,14 @@ export class Normalize {
       raw.location ||
       'Remote';
 
+    // RemoteOK uses 'position' field, fallback to 'title'
+    const title = (raw.position || raw.title || '').trim();
+
     return {
       id: `remoteok-${sourceJobId}`,
       source: 'remoteok',
       sourceJobId,
-      title: (raw.title || '').trim(),
+      title,
       company: (raw.company || '').trim(),
       location: location.trim(),
       description: (raw.description || '').trim(),
