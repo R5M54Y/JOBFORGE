@@ -1,0 +1,33 @@
+name: JOBFORGE Scraper
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:        # Manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install scraper dependencies
+        working-directory: ./scraper
+        run: npm ci
+
+      - name: Build scraper
+        working-directory: ./scraper
+        run: npm run build
+
+      - name: Run scraper
+        working-directory: ./scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node dist/index.js

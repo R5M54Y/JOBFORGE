@@ -1,0 +1,95 @@
+// JOBFORGE Scraper - Database Module
+import { Pool } from 'pg';
+import { Job } from './types';
+
+export class Database {
+  private pool: Pool;
+
+  constructor(connectionString: string) {
+    this.pool = new Pool({ connectionString, max: 5 });
+  }
+
+  async initSchema(): Promise<void> {
+    const sql = `
+      CREATE TABLE IF NOT EXISTS jobs (
+        id              TEXT PRIMARY KEY,
+        source          TEXT NOT NULL,
+        source_job_id   TEXT NOT NULL,
+        title           TEXT NOT NULL,
+        company         TEXT NOT NULL,
+        location        TEXT NOT NULL DEFAULT 'Remote',
+        description     TEXT DEFAULT '',
+        url             TEXT NOT NULL,
+        category        TEXT DEFAULT 'other',
+        employment_type TEXT DEFAULT 'full-time',
+        posted_at       TIMESTAMPTZ DEFAULT NOW(),
+        scraped_at      TIMESTAMPTZ DEFAULT NOW(),
+        expires_at      TIMESTAMPTZ,
+        is_active       BOOLEAN DEFAULT TRUE,
+        created_at      TIMESTAMPTZ DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (source, source_job_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_jobs_source ON jobs (source);
+      CREATE INDEX IF NOT EXISTS idx_jobs_category ON jobs (category);
+      CREATE INDEX IF NOT EXISTS idx_jobs_employment_type ON jobs (employment_type);
+      CREATE INDEX IF NOT EXISTS idx_jobs_location ON jobs (location);
+      CREATE INDEX IF NOT EXISTS idx_jobs_is_active ON jobs (is_active);
+      CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs (created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_jobs_title_search ON jobs USING gin (to_tsvector('english', title));
+    `;
+    await this.pool.query(sql);
+    console.log('Database schema initialized');
+  }
+
+  async upsertMany(jobs: Job[]): Promise<{ upserted: number; failed: number }> {
+    let upserted = 0;
+    let failed = 0;
+
+    for (const job of jobs) {
+      try {
+        await this.pool.query(
+          `INSERT INTO jobs (
+            id, source, source_job_id, title, company, location,
+            description, url, category, employment_type,
+            posted_at, scraped_at, expires_at, is_active, created_at, updated_at
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+          ON CONFLICT (source, source_job_id) DO UPDATE SET
+            title = EXCLUDED.title,
+            company = EXCLUDED.company,
+            location = EXCLUDED.location,
+            description = EXCLUDED.description,
+            url = EXCLUDED.url,
+            category = EXCLUDED.category,
+            employment_type = EXCLUDED.employment_type,
+            posted_at = EXCLUDED.posted_at,
+            scraped_at = EXCLUDED.scraped_at,
+            expires_at = EXCLUDED.expires_at,
+            is_active = EXCLUDED.is_active,
+            updated_at = EXCLUDED.updated_at`,
+          [
+            job.id, job.source, job.sourceJobId, job.title, job.company, job.location,
+            job.description, job.url, job.category, job.employmentType,
+            job.postedAt, job.scrapedAt, job.expiresAt, job.isActive, job.createdAt, job.updatedAt,
+          ]
+        );
+        upserted++;
+      } catch (err) {
+        failed++;
+        console.error(`Upsert failed for ${job.id}: ${err}`);
+      }
+    }
+
+    return { upserted, failed };
+  }
+
+  async getJobCount(): Promise<number> {
+    const res = await this.pool.query('SELECT COUNT(*) FROM jobs');
+    return parseInt(res.rows[0].count, 10);
+  }
+
+  async close(): Promise<void> {
+    await this.pool.end();
+  }
+}
