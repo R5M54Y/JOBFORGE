@@ -1,23 +1,23 @@
 // JOBFORGE - Database Initialization Script
-// Usage: npx tsx scripts/init-db.ts
+// Usage: npm run db:init
 import * as dotenv from 'dotenv';
 dotenv.config();
 
 import { Pool } from 'pg';
+import { getDatabaseConfig } from '../lib/database-config';
 
 async function initDatabase() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    console.error('ERROR: DATABASE_URL environment variable is not set');
-    process.exit(1);
-  }
-
-  const pool = new Pool({ connectionString });
+  let pool: Pool | null = null;
 
   try {
+    console.log('Resolving database configuration...');
+    const dbConfig = getDatabaseConfig();
+    
+    pool = new Pool({ connectionString: dbConfig.connectionString, max: 1 });
+
     console.log('Connecting to PostgreSQL...');
     const client = await pool.connect();
-    console.log('Connected successfully');
+    console.log('✓ Connected successfully');
     client.release();
 
     console.log('Creating jobs table (idempotent)...');
@@ -42,7 +42,7 @@ async function initDatabase() {
         UNIQUE (source, source_job_id)
       );
     `);
-    console.log('Table created/verified');
+    console.log('✓ Table created/verified');
 
     console.log('Creating indexes (idempotent)...');
     await pool.query(`
@@ -52,18 +52,21 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_jobs_location ON jobs (location);
       CREATE INDEX IF NOT EXISTS idx_jobs_is_active ON jobs (is_active);
       CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs (created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_jobs_title_search ON jobs USING gin (to_tsvector('english', title));
     `);
-    console.log('Indexes created/verified');
+    console.log('✓ Indexes created/verified');
 
     const countResult = await pool.query('SELECT COUNT(*) FROM jobs');
     console.log(`Current job count: ${countResult.rows[0].count}`);
 
-    console.log('\nDatabase initialization complete!');
+    console.log('\n✓ Database initialization complete!');
   } catch (error) {
-    console.error('Database initialization failed:', error);
+    console.error('✗ Database initialization failed:', error);
     process.exit(1);
   } finally {
-    await pool.end();
+    if (pool) {
+      await pool.end();
+    }
   }
 }
 
