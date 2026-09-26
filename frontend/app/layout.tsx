@@ -19,12 +19,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Histats Analytics Integration */}
-        <Script
-          id="histats-tracker"
-          strategy="afterInteractive"
-          src="//s10.histats.com/js15_as.js"
-        />
         {/* Noscript fallback for Histats */}
         <noscript>
           <a href="/" target="_blank">
@@ -34,6 +28,12 @@ export default function RootLayout({
       </head>
       <body>
         {children}
+        {/* Histats Analytics Integration */}
+        <Script
+          id="histats-tracker"
+          strategy="afterInteractive"
+          src="//s10.histats.com/js15_as.js"
+        />
         {/* External script loaded before closing body */}
         <Script
           src="https://pl31517511.profitableratecpmnetwork.com/0a/6f/45/0a6f45f6cd118b7b19498f9076f1a08f.js"
