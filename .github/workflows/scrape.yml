@@ -26,6 +26,19 @@ jobs:
         working-directory: ./scraper
         run: npm run build
 
+      - name: Run database migration (one-time)
+        working-directory: ./scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SKIP_MIGRATION: ${{ secrets.SKIP_MIGRATION || 'false' }}
+        run: |
+          if [ "$SKIP_MIGRATION" = "false" ]; then
+            echo "Running database migration..."
+            npx tsx scripts/migrate-ids.ts || echo "Migration failed or already completed"
+          else
+            echo "Migration skipped (SKIP_MIGRATION=true)"
+          fi
+
       - name: Run scraper
         working-directory: ./scraper
         env:
