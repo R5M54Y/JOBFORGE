@@ -67,20 +67,6 @@ export async function getJobs(
   };
 }
 
-export async function getJobById(id: string): Promise<Job | null> {
-  const pool = getPool();
-  try {
-    const result = await pool.query(
-      'SELECT * FROM jobs WHERE id = $1 AND is_active = TRUE LIMIT 1',
-      [id]
-    );
-    return result.rows[0] as Job | null;
-  } catch (error) {
-    console.error('Error fetching job by ID:', error);
-    return null;
-  }
-}
-
 export async function findBySourceAndJobId(source: string, sourceJobId: string): Promise<Job | null> {
   const pool = getPool();
   try {
@@ -95,7 +81,7 @@ export async function findBySourceAndJobId(source: string, sourceJobId: string):
   }
 }
 
-export async function findAll(): Promise<Job[]> {
+// Add the findAll() function for sitemap routes
   const pool = getPool();
   try {
     const result = await pool.query(
