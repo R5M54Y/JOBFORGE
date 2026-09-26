@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION || '',
   },
+  other: {
+    monetag: '0908b5ea306b7883ab2495e56bf470b7',
+  },
 };
 
 export default function RootLayout({
@@ -28,9 +31,9 @@ export default function RootLayout({
       </head>
       <body>
         {children}
-        {/* Histats Analytics Bootstrap - Initialize _Hasync queue before loading script */}
+        {/* Histats Analytics - Combined bootstrap + dynamic loading (original structure) */}
         <Script
-          id="histats-bootstrap"
+          id="histats-combined"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
@@ -38,16 +41,17 @@ export default function RootLayout({
               _Hasync.push(['Histats.start', '1,5052094,4,511,95,18,00000000']);
               _Hasync.push(['Histats.fasi', '1']);
               _Hasync.push(['Histats.track_hits', '']);
+              (function() {
+                var hs = document.createElement('script');
+                hs.type = 'text/javascript';
+                hs.async = true;
+                hs.src = ('//s10.histats.com/js15_as.js');
+                (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(hs);
+              })();
             `
           }}
         />
-        {/* Histats Analytics Integration - Load tracking script */}
-        <Script
-          id="histats-tracker"
-          strategy="afterInteractive"
-          src="//s10.histats.com/js15_as.js"
-        />
-        {/* External script loaded before closing body */}
+        {/* ProfitableRateCPM Advertising */}
         <Script
           src="https://pl31517511.profitableratecpmnetwork.com/0a/6f/45/0a6f45f6cd118b7b19498f9076f1a08f.js"
           strategy="afterInteractive"
