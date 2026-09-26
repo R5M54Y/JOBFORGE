@@ -161,8 +161,14 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   // Sanitize job description for safe HTML rendering
   const sanitizedDescription = sanitizeHtml(job.description || '');
 
-  // Fetch related jobs by category
-  const relatedJobs = await getRelatedJobs(job.id, job.category, 6);
+  // Fetch related jobs by category (gracefully handle errors)
+  let relatedJobs: Job[] = [];
+  try {
+    relatedJobs = await getRelatedJobs(job.id, job.category, 6);
+  } catch (error) {
+    console.error('Error fetching related jobs:', error);
+    // Continue rendering without related jobs
+  }
 
   return (
     <>
