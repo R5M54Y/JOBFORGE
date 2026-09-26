@@ -85,6 +85,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   }) : 'Unknown';
 
   return (
+    // Build JobPosting structured data - Start of main content
     <>
       <script
         type="application/ld+json"
@@ -140,7 +141,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 Apply Now →
               </a>
               <div style={{ fontSize: '0.85rem', color: '#999', padding: '0.75rem 0' }}>
-                Source: {job.source} · ID: {job.id}  // ← FIXED: using canonical ID
+                Source: {job.source} · ID: {job.id}  {/* FIXED: using canonical ID */}
               </div>
             </div>
           </header>
