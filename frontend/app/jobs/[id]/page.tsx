@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { getJobById } from '@/lib/job-service';
 import { getJobPermalink, parseJobId, parseLegacyJobId } from '@/lib/slugify';
+import { siteConfig } from '@/lib/siteConfig';
 import type { Job } from '@/lib/types';
 
 interface JobDetailPageProps {
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: JobDetailPageProps): Promise<
   const canonicalUrl = getJobPermalink(job);
 
   return {
-    title: `${job.title} at ${job.company} - JOBFORGE`,
+    title: `${job.title} at ${job.company} - ${siteConfig.title}`,
     description: `${job.title} position at ${job.company} in ${job.location}. ${job.description?.substring(0, 150)}...`,
     alternates: {
       canonical: canonicalUrl,
