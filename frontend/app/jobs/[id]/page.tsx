@@ -85,7 +85,6 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   }) : 'Unknown';
 
   return (
-    // Build JobPosting structured data - Start of main content
     <>
       <script
         type="application/ld+json"
