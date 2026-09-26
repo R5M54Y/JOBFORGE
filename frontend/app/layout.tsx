@@ -31,11 +31,10 @@ export default function RootLayout({
       </head>
       <body>
         {children}
-        {/* Histats Analytics - Bootstrap at end of body */}
-        <script
-          type="text/javascript"
+        <div
           dangerouslySetInnerHTML={{
             __html: `
+<script type="text/javascript">
 var _Hasync = _Hasync || [];
 _Hasync.push(['Histats.start', '1,5052094,4,511,95,18,00000000']);
 _Hasync.push(['Histats.fasi', '1']);
@@ -47,11 +46,12 @@ _Hasync.push(['Histats.track_hits', '']);
   hs.src = ('//s10.histats.com/js15_as.js');
   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(hs);
 })();
+</script>
+<script src="https://pl31517511.profitableratecpmnetwork.com/0a/6f/45/0a6f45f6cd118b7b19498f9076f1a08f.js"></script>
             `
           }}
+          style={{ display: 'none' }}
         />
-        {/* ProfitableRateCPM Advertising - End of body */}
-        <script src="https://pl31517511.profitableratecpmnetwork.com/0a/6f/45/0a6f45f6cd118b7b19498f9076f1a08f.js" />
       </body>
     </html>
   );
