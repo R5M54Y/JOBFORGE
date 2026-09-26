@@ -57,6 +57,13 @@ function sanitizeHtml(html: string): string {
   // Remove data: protocol
   html = html.replace(/data:/gi, '');
   
+  // Remove style attributes
+  html = html.replace(/\s+style\s*=\s*["'][^"']*['"]/gi, '');
+  
+  // Remove onerror and on load event handlers
+  html = html.replace(/\bonerror\s*=\s*["'][^"']*['"]/gi, '');
+  html = html.replace(/\nonload\s*=\s*["'][^"']*['"]/gi, '');
+  
   return html;
 }
 
