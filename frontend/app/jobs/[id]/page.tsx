@@ -8,7 +8,7 @@ interface JobDetailPageProps {
 
 async function getJob(id: string): Promise<Job | null> {
   try {
-    const res = await fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/jobs/${id}`, {
+    const res = await fetch(`/api/jobs/${id}`, {
       cache: 'no-store',
     });
     if (!res.ok) return null;
