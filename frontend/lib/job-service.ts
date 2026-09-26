@@ -38,20 +38,17 @@ export async function getJobs(
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-  // Count query
   const countResult = await pool.query(
     `SELECT COUNT(*) FROM jobs ${where}`,
     values
   );
   const total = parseInt(countResult.rows[0].count, 10);
 
-  // Sanitize pagination
   const safePage = Math.max(1, page);
   const safeLimit = Math.max(1, Math.min(100, limit));
   const offset = (safePage - 1) * safeLimit;
   const totalPages = Math.max(1, Math.ceil(total / safeLimit));
 
-  // Data query
   const dataValues = [...values, safeLimit, offset];
   const result = await pool.query(
     `SELECT * FROM jobs ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
@@ -67,16 +64,16 @@ export async function getJobs(
   };
 }
 
-export async function findBySourceAndJobId(source: string, sourceJobId: string): Promise<Job | null> {
+export async function getJobById(id: string): Promise<Job | null> {
   const pool = getPool();
   try {
     const result = await pool.query(
-      'SELECT * FROM jobs WHERE source = $1 AND source_job_id = $2 AND is_active = TRUE LIMIT 1',
-      [source, sourceJobId]
+      'SELECT * FROM jobs WHERE id = $1 AND is_active = TRUE LIMIT 1',
+      [id]
     );
     return result.rows[0] as Job | null;
   } catch (error) {
-    console.error('Error fetching job by source and source_job_id:', error);
+    console.error('Error fetching job by ID:', error);
     return null;
   }
 }
@@ -95,8 +92,8 @@ export async function findBySourceAndJobId(source: string, sourceJobId: string):
   }
 }
 
-// Add the findAll() function for sitemap routes
 export async function findAll(): Promise<Job[]> {
+  const pool = getPool();
   try {
     const result = await pool.query(
       'SELECT * FROM jobs WHERE is_active = TRUE ORDER BY created_at DESC'
