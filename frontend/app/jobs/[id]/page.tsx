@@ -161,15 +161,6 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   // Sanitize job description for safe HTML rendering
   const sanitizedDescription = sanitizeHtml(job.description || '');
 
-  // Fetch related jobs by category (gracefully handle errors)
-  let relatedJobs: Job[] = [];
-  try {
-    relatedJobs = await getRelatedJobs(job.id, job.category, 6);
-  } catch (error) {
-    console.error('Error fetching related jobs:', error);
-    // Continue rendering without related jobs
-  }
-
   return (
     <>
       <script
@@ -243,39 +234,6 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
               dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
             />
           </section>
-
-          {relatedJobs && relatedJobs.length > 0 && (
-            <section style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '1rem' }}>Related Jobs</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-                {relatedJobs.map((relatedJob) => (
-                  <a
-                    key={relatedJob.id}
-                    href={getJobPermalink(relatedJob)}
-                    style={{
-                      padding: '1rem',
-                      border: '1px solid #eee',
-                      borderRadius: 6,
-                      textDecoration: 'none',
-                      color: 'inherit',
-                      transition: 'border-color 0.2s',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#0070f3')}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#eee')}
-                  >
-                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 0.5rem 0', color: '#0070f3' }}>
-                      {relatedJob.title}
-                    </h3>
-                    <p style={{ fontSize: '0.95rem', color: '#555', margin: '0 0 0.5rem 0' }}>{relatedJob.company}</p>
-                    <div style={{ fontSize: '0.85rem', color: '#999' }}>
-                      <div>📍 {relatedJob.location}</div>
-                      <div>💼 {relatedJob.employment_type}</div>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </section>
-          )}
 
           <footer style={{ borderTop: '1px solid #eee', paddingTop: '1rem', fontSize: '0.85rem', color: '#999' }}>
             <p>Posted on {new Date(job.posted_at).toLocaleString()} · Last updated {new Date(job.updated_at).toLocaleString()}</p>
