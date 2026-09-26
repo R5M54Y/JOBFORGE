@@ -36,6 +36,30 @@ export async function generateMetadata({ params }: JobDetailPageProps): Promise<
   };
 }
 
+// Lightweight HTML sanitizer that preserves safe formatting
+function sanitizeHtml(html: string): string {
+  if (!html) return '';
+  
+  // Remove script tags and dangerous content
+  html = html.replace(/<script[^>]*>.*?<\/script>/gi, '');
+  html = html.replace(/<iframe[^>]*>.*?<\/iframe>/gi, '');
+  html = html.replace(/<object[^>]*>.*?<\/object>/gi, '');
+  html = html.replace(/<embed[^>]*>.*?<\/embed>/gi, '');
+  
+  // Remove event handlers
+  html = html.replace(/\bon\w+\s*=\s*["'][^"']*['"]/gi, '');
+  html = html.replace(/on\w+\s*=\s*["'][^"']*['"]/gi, '');
+  
+  // Remove JavaScript protocol
+  html = html.replace(/javascript:/gi, '');
+  html = html.replace(/vbscript:/gi, '');
+  
+  // Remove data: protocol
+  html = html.replace(/data:/gi, '');
+  
+  return html;
+}
+
 export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const job = await getJob(params.id);
 
@@ -83,6 +107,9 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
     month: 'short',
     day: 'numeric',
   }) : 'Unknown';
+
+  // Sanitize job description for safe HTML rendering
+  const sanitizedDescription = sanitizeHtml(job.description || '');
 
   return (
     <>
@@ -154,9 +181,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 whiteSpace: 'pre-wrap',
                 wordWrap: 'break-word',
               }}
-            >
-              {job.description}
-            </div>
+              dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+            />
           </section>
 
           <footer style={{ borderTop: '1px solid #eee', paddingTop: '1rem', fontSize: '0.85rem', color: '#999' }}>
