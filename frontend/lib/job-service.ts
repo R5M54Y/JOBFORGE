@@ -104,3 +104,23 @@ export async function findAll(): Promise<Job[]> {
     return [];
   }
 }
+
+export async function getRelatedJobs(currentJobId: string, category: string, limit: number = 6): Promise<Job[]> {
+  const pool = getPool();
+  try {
+    // Find related jobs by category, excluding current job
+    const result = await pool.query(
+      `SELECT * FROM jobs 
+       WHERE is_active = TRUE 
+       AND id != $1 
+       AND category = $2 
+       ORDER BY created_at DESC 
+       LIMIT $3`,
+      [currentJobId, category, limit]
+    );
+    return result.rows as Job[];
+  } catch (error) {
+    console.error('Error fetching related jobs:', error);
+    return [];
+  }
+}
