@@ -15,7 +15,7 @@ export function JobList({ jobs }: Props) {
       {jobs.map((job) => (
         <Link
           key={job.id}
-          href={`/jobs/${job.id}`}  // ← FIXED: Using canonical database ID
+          href={`/jobs/${job.id}`}
           style={{
             textDecoration: 'none',
             color: 'inherit',
