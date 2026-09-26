@@ -1,5 +1,6 @@
-'use client';
+"use client";
 
+import { siteConfig } from '@/lib/siteConfig';
 import { useState, useEffect, useCallback } from 'react';
 import { JobFilters } from './components/JobFilters';
 import { JobList } from './components/JobList';
@@ -58,7 +59,7 @@ export default function Home() {
   return (
     <main style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1rem' }}>
       <header style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>JOBFORGE</h1>
+        <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{siteConfig.title}</h1>
         <p style={{ color: '#666' }}>Remote job aggregator &mdash; {total} jobs available</p>
       </header>
 

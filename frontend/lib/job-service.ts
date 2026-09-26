@@ -80,3 +80,17 @@ export async function getJobById(id: string): Promise<Job | null> {
     return null;
   }
 }
+
+// Add the findAll() function for sitemap routes
+export async function findAll(): Promise<Job[]> {
+  const pool = getPool();
+  try {
+    const result = await pool.query(
+      'SELECT * FROM jobs WHERE is_active = TRUE ORDER BY created_at DESC'
+    );
+    return result.rows as Job[];
+  } catch (error) {
+    console.error('Error fetching all jobs:', error);
+    return [];
+  }
+}

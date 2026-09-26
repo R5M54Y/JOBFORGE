@@ -1,19 +1,14 @@
-import type { Metadata } from 'next';
+import { siteConfig } from '@/lib/siteConfig';
 import Script from 'next/script';
 import './globals.css';
-
-const googleVerification = process.env.GOOGLE_SITE_VERIFICATION;
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'JOBFORGE - Remote Job Aggregator',
+  title: siteConfig.title,
   description: 'Find remote jobs from multiple sources in one place',
-  ...(googleVerification
-    ? {
-        verification: {
-          google: googleVerification,
-        },
-      }
-    : {}),
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || '',
+  },
 };
 
 export default function RootLayout({
