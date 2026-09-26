@@ -83,8 +83,17 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   // Handle legacy URL format: remotive-2091140
   const legacyParse = parseLegacyJobId(params.id);
   if (legacyParse) {
-    // Legacy format detected - would need source lookup
-    // For now, just 404 (proper implementation requires DB lookup by source+source_job_id)
+    // Legacy format detected - lookup by source + source_job_id
+    const { findBySourceAndJobId } = await import('@/lib/job-service');
+    const job = await findBySourceAndJobId(legacyParse.source, legacyParse.sourceJobId);
+    
+    if (job) {
+      // Redirect to new canonical URL
+      const canonicalUrl = getJobPermalink(job);
+      redirect(canonicalUrl);
+    }
+    
+    // Legacy job not found
     notFound();
   }
 
