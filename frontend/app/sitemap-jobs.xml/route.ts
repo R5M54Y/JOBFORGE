@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findAll } from '@/lib/job-service';
+import { getJobPermalink } from '@/lib/slugify';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${jobs.map(job => `  <url>
-    <loc>${baseUrl}/jobs/${job.id}</loc>
+    <loc>${baseUrl}${getJobPermalink(job)}</loc>
   </url>`).join('\n')}
 </urlset>`;
 

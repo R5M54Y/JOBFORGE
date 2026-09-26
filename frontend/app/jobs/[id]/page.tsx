@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getJobById } from '@/lib/job-service';
+import { getJobPermalink, parseJobId, parseLegacyJobId } from '@/lib/slugify';
 import type { Job } from '@/lib/types';
 
 interface JobDetailPageProps {
@@ -12,7 +13,16 @@ async function getJob(id: string): Promise<Job | null> {
 }
 
 export async function generateMetadata({ params }: JobDetailPageProps): Promise<Metadata> {
-  const job = await getJob(params.id);
+  // Parse internal ID from slug-id format
+  const jobId = parseJobId(params.id);
+  if (!jobId) {
+    return {
+      title: 'Job Not Found',
+      description: 'The job you are looking for does not exist.',
+    };
+  }
+
+  const job = await getJob(jobId);
 
   if (!job) {
     return {
@@ -21,17 +31,19 @@ export async function generateMetadata({ params }: JobDetailPageProps): Promise<
     };
   }
 
+  const canonicalUrl = getJobPermalink(job);
+
   return {
     title: `${job.title} at ${job.company} - JOBFORGE`,
     description: `${job.title} position at ${job.company} in ${job.location}. ${job.description?.substring(0, 150)}...`,
     alternates: {
-      canonical: `/jobs/${job.id}`,  // ← Using canonical ID
+      canonical: canonicalUrl,
     },
     openGraph: {
       title: `${job.title} at ${job.company}`,
       description: job.description?.substring(0, 150) || '',
       type: 'website',
-      url: `/jobs/${job.id}`,  // ← Using canonical ID
+      url: canonicalUrl,
     },
   };
 }
@@ -68,10 +80,31 @@ function sanitizeHtml(html: string): string {
 }
 
 export default async function JobDetailPage({ params }: JobDetailPageProps) {
-  const job = await getJob(params.id);
+  // Handle legacy URL format: remotive-2091140
+  const legacyParse = parseLegacyJobId(params.id);
+  if (legacyParse) {
+    // Legacy format detected - would need source lookup
+    // For now, just 404 (proper implementation requires DB lookup by source+source_job_id)
+    notFound();
+  }
+
+  // Parse new format: slug-id
+  const jobId = parseJobId(params.id);
+  if (!jobId) {
+    notFound();
+  }
+
+  const job = await getJob(jobId);
 
   if (!job) {
     notFound();
+  }
+
+  // Verify slug matches (prevent duplicate content)
+  const canonicalUrl = getJobPermalink(job);
+  if (`/jobs/${params.id}` !== canonicalUrl) {
+    // Redirect to canonical URL
+    redirect(canonicalUrl);
   }
 
   // Build JobPosting structured data
@@ -94,11 +127,11 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       },
     },
     employmentType: job.employment_type?.toUpperCase() || 'FULL_TIME',
-    url: job.url,
+    url: canonicalUrl,
     identifier: {
       '@type': 'PropertyValue',
       name: `${job.source}`,
-      value: job.source_job_id,  // ← External identifier
+      value: job.source_job_id,
     },
   };
 
@@ -174,7 +207,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 Apply Now →
               </a>
               <div style={{ fontSize: '0.85rem', color: '#999', padding: '0.75rem 0' }}>
-                Source: {job.source} · ID: {job.id}  {/* FIXED: using canonical ID */}
+                Source: {job.source} · ID: {job.id}
               </div>
             </div>
           </header>

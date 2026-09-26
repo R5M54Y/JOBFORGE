@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getJobPermalink } from '@/lib/slugify';
 import type { Job } from '@/lib/types';
 
 interface Props {
@@ -15,7 +16,7 @@ export function JobList({ jobs }: Props) {
       {jobs.map((job) => (
         <Link
           key={job.id}
-          href={`/jobs/${job.id}`}
+          href={getJobPermalink(job)}
           style={{
             textDecoration: 'none',
             color: 'inherit',
