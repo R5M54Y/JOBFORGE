@@ -1,0 +1,39 @@
+name: JOBFORGE Production Verification
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install scraper dependencies
+        working-directory: ./scraper
+        run: npm ci
+      
+      - name: Run production verification
+        working-directory: ./scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/verify-production.ts
+      
+      - name: Run scraper (regression test)
+        working-directory: ./scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node dist/index.js
+      
+      - name: Verify post-scraper state
+        working-directory: ./scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/verify-production.ts
