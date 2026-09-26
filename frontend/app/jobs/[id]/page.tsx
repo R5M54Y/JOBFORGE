@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { getJobById } from '@/lib/job-service';
 import type { Job } from '@/lib/types';
 
 interface JobDetailPageProps {
@@ -7,15 +8,7 @@ interface JobDetailPageProps {
 }
 
 async function getJob(id: string): Promise<Job | null> {
-  try {
-    const res = await fetch(`/api/jobs/${id}`, {
-      cache: 'no-store',
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
+  return await getJobById(id);
 }
 
 export async function generateMetadata({ params }: JobDetailPageProps): Promise<Metadata> {
@@ -32,13 +25,13 @@ export async function generateMetadata({ params }: JobDetailPageProps): Promise<
     title: `${job.title} at ${job.company} - JOBFORGE`,
     description: `${job.title} position at ${job.company} in ${job.location}. ${job.description?.substring(0, 150)}...`,
     alternates: {
-      canonical: `/jobs/${job.id}`,
+      canonical: `/jobs/${job.id}`,  // ← Using canonical ID
     },
     openGraph: {
       title: `${job.title} at ${job.company}`,
       description: job.description?.substring(0, 150) || '',
       type: 'website',
-      url: `/jobs/${job.id}`,
+      url: `/jobs/${job.id}`,  // ← Using canonical ID
     },
   };
 }
@@ -74,7 +67,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
     identifier: {
       '@type': 'PropertyValue',
       name: `${job.source}`,
-      value: job.source_job_id,
+      value: job.source_job_id,  // ← External identifier
     },
   };
 
@@ -147,7 +140,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 Apply Now →
               </a>
               <div style={{ fontSize: '0.85rem', color: '#999', padding: '0.75rem 0' }}>
-                Source: {job.source} · ID: {job.source_job_id}
+                Source: {job.source} · ID: {job.id}  // ← FIXED: using canonical ID
               </div>
             </div>
           </header>

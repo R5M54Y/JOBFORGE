@@ -1,4 +1,3 @@
-// JOBFORGE Frontend - Job Service
 import { getPool } from './db';
 import { Job, JobsResponse, JobFilters } from './types';
 import { APP_CONFIG } from '@/config/siteConfig';
@@ -66,4 +65,18 @@ export async function getJobs(
     limit: safeLimit,
     totalPages,
   };
+}
+
+export async function getJobById(id: string): Promise<Job | null> {
+  const pool = getPool();
+  try {
+    const result = await pool.query(
+      'SELECT * FROM jobs WHERE id = $1 AND is_active = TRUE LIMIT 1',
+      [id]
+    );
+    return result.rows[0] as Job | null;
+  } catch (error) {
+    console.error('Error fetching job by ID:', error);
+    return null;
+  }
 }
