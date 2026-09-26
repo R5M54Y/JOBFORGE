@@ -28,7 +28,20 @@ export default function RootLayout({
       </head>
       <body>
         {children}
-        {/* Histats Analytics Integration */}
+        {/* Histats Analytics Bootstrap - Initialize _Hasync queue before loading script */}
+        <Script
+          id="histats-bootstrap"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              var _Hasync = _Hasync || [];
+              _Hasync.push(['Histats.start', '1,5052094,4,511,95,18,00000000']);
+              _Hasync.push(['Histats.fasi', '1']);
+              _Hasync.push(['Histats.track_hits', '']);
+            `
+          }}
+        />
+        {/* Histats Analytics Integration - Load tracking script */}
         <Script
           id="histats-tracker"
           strategy="afterInteractive"
