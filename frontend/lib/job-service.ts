@@ -81,8 +81,22 @@ export async function findBySourceAndJobId(source: string, sourceJobId: string):
   }
 }
 
-// Add the findAll() function for sitemap routes
+export async function findBySourceAndJobId(source: string, sourceJobId: string): Promise<Job | null> {
   const pool = getPool();
+  try {
+    const result = await pool.query(
+      'SELECT * FROM jobs WHERE source = $1 AND source_job_id = $2 AND is_active = TRUE LIMIT 1',
+      [source, sourceJobId]
+    );
+    return result.rows[0] as Job | null;
+  } catch (error) {
+    console.error('Error fetching job by source and source_job_id:', error);
+    return null;
+  }
+}
+
+// Add the findAll() function for sitemap routes
+export async function findAll(): Promise<Job[]> {
   try {
     const result = await pool.query(
       'SELECT * FROM jobs WHERE is_active = TRUE ORDER BY created_at DESC'
