@@ -37,7 +37,14 @@ export default function RootLayout({
           </a>
         </noscript>
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* External script loaded before closing body */}
+        <Script
+          src="https://pl31517511.profitableratecpmnetwork.com/0a/6f/45/0a6f45f6cd118b7b19498f9076f1a08f.js"
+          strategy="afterInteractive"
+        />
+      </body>
     </html>
   );
 }
