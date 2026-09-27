@@ -40,6 +40,25 @@ export interface RemotiveJob {
   [key: string]: unknown;
 }
 
+export interface JobicyJob {
+  id: number | string;
+  url: string;
+  title: string;
+  companyName: string;
+  companyLogo?: string;
+  jobTitle?: string;
+  jobGeo?: string;
+  jobLevel?: string;
+  jobIndustry: string[];
+  jobType: string[];
+  pubDate: string;
+  description?: string;
+  annualSalaryMin?: string;
+  annualSalaryMax?: string;
+  salaryCurrency?: string;
+  [key: string]: unknown;
+}
+
 export interface Job {
   id: string;
   source: string;

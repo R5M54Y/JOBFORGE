@@ -2,12 +2,12 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { RemoteOKSource, RemotiveSource, IJobSource } from './sources';
+import { RemoteOKSource, RemotiveSource, JobicySource, IJobSource } from './sources';
 import { Normalize } from './normalize';
 import { Validate } from './validate';
 import { Deduplicate } from './deduplicate';
 import { Database } from './db';
-import { ScrapeResult, SourceResult, RemoteOKJob, RemotiveJob } from './types';
+import { ScrapeResult, SourceResult, RemoteOKJob, RemotiveJob, JobicyJob } from './types';
 import { getDatabaseConfig } from './config/database';
 
 async function runSource(
@@ -39,6 +39,8 @@ async function runSource(
       normalized = Normalize.fromRemoteOKMany(rawJobs as RemoteOKJob[]);
     } else if (source.name === 'remotive') {
       normalized = Normalize.fromRemotiveMany(rawJobs as RemotiveJob[]);
+    } else if (source.name === 'jobicy') {
+      normalized = Normalize.fromJobicyMany(rawJobs as JobicyJob[]);
     } else {
       throw new Error(`Unknown source: ${source.name}`);
     }
@@ -75,6 +77,7 @@ async function run(): Promise<ScrapeResult> {
   const sources: IJobSource[] = [
     new RemoteOKSource(),
     new RemotiveSource(),
+    new JobicySource(),
   ];
 
   const sourceResults: SourceResult[] = [];

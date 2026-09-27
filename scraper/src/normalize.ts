@@ -1,5 +1,5 @@
 // JOBFORGE Scraper - Normalize Module
-import { RemoteOKJob, RemotiveJob, Job } from './types';
+import { RemoteOKJob, RemotiveJob, JobicyJob, Job } from './types';
 
 export class Normalize {
   static fromRemoteOK(raw: RemoteOKJob): Job {
@@ -100,6 +100,75 @@ export class Normalize {
         results.push(this.fromRemotive(raw));
       } catch (err) {
         console.warn(`Normalize skip Remotive job id=${raw.id}: ${err}`);
+      }
+    }
+    return results;
+  }
+
+  static fromJobicy(raw: JobicyJob): Job {
+    const now = new Date();
+    const sourceJobId = String(raw.id);
+
+    let postedAt: Date;
+    try {
+      postedAt = raw.pubDate ? new Date(raw.pubDate) : now;
+      if (isNaN(postedAt.getTime())) postedAt = now;
+    } catch {
+      postedAt = now;
+    }
+
+    const location = raw.jobGeo || 'Remote';
+    
+    // Build salary string if available
+    let salary = '';
+    if (raw.annualSalaryMin || raw.annualSalaryMax) {
+      const currency = raw.salaryCurrency || 'USD';
+      if (raw.annualSalaryMin && raw.annualSalaryMax) {
+        salary = `${currency} ${raw.annualSalaryMin}-${raw.annualSalaryMax}`;
+      } else if (raw.annualSalaryMin) {
+        salary = `${currency} ${raw.annualSalaryMin}+`;
+      } else if (raw.annualSalaryMax) {
+        salary = `${currency} up to ${raw.annualSalaryMax}`;
+      }
+    }
+
+    // Use first industry as category, fallback to 'other'
+    const category = (raw.jobIndustry && raw.jobIndustry.length > 0)
+      ? raw.jobIndustry[0].trim()
+      : 'other';
+
+    // Use first jobType, fallback to 'full-time'
+    const employmentType = (raw.jobType && raw.jobType.length > 0)
+      ? raw.jobType[0].trim().toLowerCase().replace(/_/g, '-')
+      : 'full-time';
+
+    return {
+      id: `jobicy-${sourceJobId}`,
+      source: 'jobicy',
+      sourceJobId,
+      title: (raw.jobTitle || raw.title || '').trim(),
+      company: (raw.companyName || '').trim(),
+      location: location.trim(),
+      description: (raw.description || '').trim(),
+      url: raw.url || '',
+      category,
+      employmentType,
+      postedAt,
+      scrapedAt: now,
+      expiresAt: null,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  static fromJobicyMany(rawJobs: JobicyJob[]): Job[] {
+    const results: Job[] = [];
+    for (const raw of rawJobs) {
+      try {
+        results.push(this.fromJobicy(raw));
+      } catch (err) {
+        console.warn(`Normalize skip Jobicy job id=${raw.id}: ${err}`);
       }
     }
     return results;

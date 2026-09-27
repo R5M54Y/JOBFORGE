@@ -1,5 +1,5 @@
 // JOBFORGE Scraper - Abstract Source Interface
-import { RemoteOKJob, RemotiveJob } from './types';
+import { RemoteOKJob, RemotiveJob, JobicyJob } from './types';
 
 export interface IJobSource {
   name: string;
@@ -79,5 +79,42 @@ export class RemotiveSource implements IJobSource {
     }
 
     throw new Error('Remotive API returned unexpected response format');
+  }
+}
+
+export class JobicySource implements IJobSource {
+  name = 'jobicy';
+
+  async fetchJobs(): Promise<JobicyJob[]> {
+    const url = 'https://jobicy.com/api/v2/remote-jobs';
+
+    console.log(`Fetching from: ${url}`);
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'JOBFORGE-Scraper/1.0 (+https://github.com/jobforge)',
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Jobicy API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data: unknown = await response.json();
+
+    // Jobicy returns an object with "jobs" array
+    if (
+      typeof data === 'object' &&
+      data !== null &&
+      'jobs' in data &&
+      Array.isArray((data as Record<string, unknown>).jobs)
+    ) {
+      const jobs = (data as Record<string, unknown>).jobs as JobicyJob[];
+      console.log(`Fetched ${jobs.length} raw jobs from Jobicy`);
+      return jobs;
+    }
+
+    throw new Error('Jobicy API returned unexpected response format');
   }
 }
