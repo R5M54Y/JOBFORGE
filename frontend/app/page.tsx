@@ -2,12 +2,15 @@
 
 import { siteConfig } from '@/lib/siteConfig';
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { JobFilters } from './components/JobFilters';
 import { JobList } from './components/JobList';
 import { Pagination } from './components/Pagination';
 import type { Job, JobsResponse } from '@/lib/types';
 
 export default function Home() {
+  const searchParams = useSearchParams();
+  
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -15,10 +18,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
-    keyword: '',
-    location: '',
-    category: '',
-    employmentType: '',
+    keyword: searchParams.get('keyword') || '',
+    location: searchParams.get('location') || '',
+    category: searchParams.get('category') || '',
+    employmentType: searchParams.get('employmentType') || '',
   });
 
   const fetchJobs = useCallback(async () => {
