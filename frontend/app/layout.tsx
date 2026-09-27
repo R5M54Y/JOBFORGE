@@ -2,6 +2,7 @@ import { siteConfig } from '@/lib/siteConfig';
 import Script from 'next/script';
 import './globals.css';
 import type { Metadata } from 'next';
+import { Header } from './components/Header';
 
 export const metadata: Metadata = {
   title: siteConfig.title,
@@ -30,6 +31,7 @@ export default function RootLayout({
         </noscript>
       </head>
       <body>
+        <Header />
         {children}
         <div
           dangerouslySetInnerHTML={{
