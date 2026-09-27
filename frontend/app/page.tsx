@@ -1,14 +1,14 @@
 "use client";
 
 import { siteConfig } from '@/lib/siteConfig';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { JobFilters } from './components/JobFilters';
 import { JobList } from './components/JobList';
 import { Pagination } from './components/Pagination';
 import type { Job, JobsResponse } from '@/lib/types';
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -78,5 +78,13 @@ export default function Home() {
         </>
       )}
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
