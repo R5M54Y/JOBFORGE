@@ -124,3 +124,43 @@ export async function getRelatedJobs(currentJobId: string, category: string, lim
     return [];
   }
 }
+
+export async function getCategoriesWithCounts(): Promise<Array<{ category: string; count: number }>> {
+  const pool = getPool();
+  try {
+    const result = await pool.query(
+      `SELECT category, COUNT(*) as count 
+       FROM jobs 
+       WHERE is_active = TRUE AND category IS NOT NULL AND category != '' 
+       GROUP BY category 
+       ORDER BY count DESC, category ASC`
+    );
+    return result.rows.map(row => ({
+      category: row.category,
+      count: parseInt(row.count, 10)
+    }));
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
+  }
+}
+
+export async function getLocationsWithCounts(): Promise<Array<{ location: string; count: number }>> {
+  const pool = getPool();
+  try {
+    const result = await pool.query(
+      `SELECT location, COUNT(*) as count 
+       FROM jobs 
+       WHERE is_active = TRUE AND location IS NOT NULL AND location != '' 
+       GROUP BY location 
+       ORDER BY count DESC, location ASC`
+    );
+    return result.rows.map(row => ({
+      location: row.location,
+      count: parseInt(row.count, 10)
+    }));
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    return [];
+  }
+}
