@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/app/api/cron/scrape/route.ts",
+      "use": "@vercel/node",
+      "name": "jobforge-cron-scrape"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/cron/scrape",
+      "dest": "/frontend/app/api/cron/scrape/route.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/app/(.*)"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/scrape",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
