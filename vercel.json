@@ -3,8 +3,7 @@
   "builds": [
     {
       "src": "frontend/app/api/cron/scrape/route.ts",
-      "use": "@vercel/node",
-      "name": "jobforge-cron-scrape"
+      "use": "@vercel/node"
     }
   ],
   "routes": [
