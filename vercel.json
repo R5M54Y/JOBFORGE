@@ -1,21 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "frontend/app/api/cron/scrape/route.ts",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/cron/scrape",
-      "dest": "/frontend/app/api/cron/scrape/route.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/app/(.*)"
-    }
-  ],
   "crons": [
     {
       "path": "/api/cron/scrape",
