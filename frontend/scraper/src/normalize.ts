@@ -149,7 +149,7 @@ export class Normalize {
       .replace(/<[^>]*>/g, ' ')  // Replace tags with single space
       .replace(/\s+/g, ' ')      // Collapse whitespace
       .replace(/^\s+|\s+$/g, '') // Trim
-      .replace(/\\s*<\\/\\s*/g, ' '); // Clean up some tag patterns
+      .replace(/\s*<\/\s*/g, ' '); // Clean up tag closing patterns
 
     return {
       id: `jobicy-${sourceJobId}`,
