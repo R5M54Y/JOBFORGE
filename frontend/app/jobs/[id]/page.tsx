@@ -1,295 +1,121 @@
 import { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { getJobById, getRelatedJobs } from '@/lib/job-service';
-import { getJobPermalink, parseJobId, parseLegacyJobId } from '@/lib/slugify';
-import { siteConfig } from '@/lib/siteConfig';
+import { JobList } from '@/app/components/JobList';
 import type { Job } from '@/lib/types';
 
-interface JobDetailPageProps {
+interface Props {
   params: { id: string };
 }
 
-async function getJob(id: string): Promise<Job | null> {
-  return await getJobById(id);
-}
-
-export async function generateMetadata({ params }: JobDetailPageProps): Promise<Metadata> {
-  // Parse internal ID from slug-id format
-  const jobId = parseJobId(params.id);
-  if (!jobId) {
-    return {
-      title: 'Job Not Found',
-      description: 'The job you are looking for does not exist.',
-    };
-  }
-
-  const job = await getJob(jobId);
-
-  if (!job) {
-    return {
-      title: 'Job Not Found',
-      description: 'The job you are looking for does not exist.',
-    };
-  }
-
-  const canonicalUrl = getJobPermalink(job);
-
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const job = await getJobById(params.id);
+  if (!job) return { title: 'Job Not Found | JOBFORGE' };
+  
   return {
-    title: `${job.title} at ${job.company} - ${siteConfig.title}`,
-    description: `${job.title} position at ${job.company} in ${job.location}. ${job.description?.substring(0, 150)}...`,
-    alternates: {
-      canonical: canonicalUrl,
-    },
-    openGraph: {
-      title: `${job.title} at ${job.company}`,
-      description: job.description?.substring(0, 150) || '',
-      type: 'website',
-      url: canonicalUrl,
-    },
+    title: `${job.title} at ${job.company} | JOBFORGE`,
+    description: job.description?.substring(0, 160) || `Apply for ${job.title} position at ${job.company}`,
   };
 }
 
-// Lightweight HTML sanitizer that preserves safe formatting
-function sanitizeHtml(html: string): string {
-  if (!html) return '';
-  
-  // Remove script tags and dangerous content
-  html = html.replace(/<script[^>]*>.*?<\/script>/gi, '');
-  html = html.replace(/<iframe[^>]*>.*?<\/iframe>/gi, '');
-  html = html.replace(/<object[^>]*>.*?<\/object>/gi, '');
-  html = html.replace(/<embed[^>]*>.*?<\/embed>/gi, '');
-  
-  // Remove event handlers
-  html = html.replace(/\bon\w+\s*=\s*["'][^"']*['"]/gi, '');
-  html = html.replace(/on\w+\s*=\s*["'][^"']*['"]/gi, '');
-  
-  // Remove JavaScript protocol
-  html = html.replace(/javascript:/gi, '');
-  html = html.replace(/vbscript:/gi, '');
-  
-  // Remove data: protocol
-  html = html.replace(/data:/gi, '');
-  
-  // Remove style attributes
-  html = html.replace(/\s+style\s*=\s*["'][^"']*['"]/gi, '');
-  
-  // Remove onerror and on load event handlers
-  html = html.replace(/\bonerror\s*=\s*["'][^"']*['"]/gi, '');
-  html = html.replace(/\nonload\s*=\s*["'][^"']*['"]/gi, '');
-  
-  return html;
-}
+export default async function JobDetailPage({ params }: Props) {
+  const job = await getJobById(params.id);
+  if (!job) notFound();
 
-export default async function JobDetailPage({ params }: JobDetailPageProps) {
-  // Handle legacy URL format: remotive-2091140
-  const legacyParse = parseLegacyJobId(params.id);
-  if (legacyParse) {
-    // Legacy format detected - lookup by source + source_job_id
-    const { findBySourceAndJobId } = await import('@/lib/job-service');
-    const job = await findBySourceAndJobId(legacyParse.source, legacyParse.sourceJobId);
-    
-    if (job) {
-      // Redirect to new canonical URL
-      const canonicalUrl = getJobPermalink(job);
-      redirect(canonicalUrl);
-    }
-    
-    // Legacy job not found
-    notFound();
-  }
+  const relatedJobs = await getRelatedJobs(job.id, job.category, 3);
 
-  // Parse new format: slug-id
-  const jobId = parseJobId(params.id);
-  if (!jobId) {
-    notFound();
-  }
-
-  const job = await getJob(jobId);
-
-  if (!job) {
-    notFound();
-  }
-
-  // Verify slug matches (prevent duplicate content)
-  const canonicalUrl = getJobPermalink(job);
-  if (`/jobs/${params.id}` !== canonicalUrl) {
-    // Redirect to canonical URL
-    redirect(canonicalUrl);
-  }
-
-  // Build JobPosting structured data
-  const jobPosting = {
-    '@context': 'https://schema.org',
-    '@type': 'JobPosting',
-    title: job.title,
-    description: job.description,
-    datePosted: job.posted_at,
-    validThrough: job.expires_at || undefined,
-    hiringOrganization: {
-      '@type': 'Organization',
-      name: job.company,
-    },
-    jobLocation: {
-      '@type': 'Place',
-      address: {
-        '@type': 'PostalAddress',
-        addressRegion: job.location,
-      },
-    },
-    employmentType: job.employment_type?.toUpperCase() || 'FULL_TIME',
-    url: canonicalUrl,
-    identifier: {
-      '@type': 'PropertyValue',
-      name: `${job.source}`,
-      value: job.source_job_id,
-    },
+  const detailStyle: React.CSSProperties = {
+    padding: '0.75rem 0',
+    borderBottom: '1px solid #eee',
+    display: 'flex',
+    gap: '1rem',
   };
 
-  // Clean up undefined properties
-  Object.keys(jobPosting).forEach(key => {
-    if (jobPosting[key as keyof typeof jobPosting] === undefined) {
-      delete jobPosting[key as keyof typeof jobPosting];
-    }
-  });
-
-  const postedDate = job.posted_at ? new Date(job.posted_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }) : 'Unknown';
-
-  // Sanitize job description for safe HTML rendering
-  const sanitizedDescription = sanitizeHtml(job.description || '');
-
-  // Fetch related jobs safely - isolated error handling
-  let relatedJobs: Job[] = [];
-  try {
-    relatedJobs = await getRelatedJobs(job.id, job.category, 6);
-  } catch (error) {
-    console.error('Failed to load related jobs:', error);
-    // Continue without related jobs
-  }
+  const labelStyle: React.CSSProperties = {
+    fontWeight: 600,
+    width: '140px',
+    flexShrink: 0,
+    color: '#666',
+  };
 
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPosting) }}
-      />
+    <main style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <a href="/" style={{ color: '#0070f3', textDecoration: 'none', fontSize: '0.9rem' }}>&larr; Back to all jobs</a>
+      </div>
 
-      <main style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1rem' }}>
-        <div style={{ marginBottom: '2rem' }}>
+      <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: '2rem', marginBottom: '3rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
+          <div>
+            <h1 style={{ fontSize: '2rem', fontWeight: 700, margin: 0, color: '#333' }}>{job.title}</h1>
+            <p style={{ fontSize: '1.25rem', color: '#555', margin: '0.5rem 0' }}>{job.company}</p>
+          </div>
           <a
-            href="/"
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
-              color: '#0070f3',
+              padding: '0.75rem 1.5rem',
+              background: '#0070f3',
+              color: '#fff',
+              borderRadius: 8,
               textDecoration: 'none',
-              fontSize: '0.9rem',
-              marginBottom: '1rem',
-              display: 'inline-block',
+              fontWeight: 600,
+              fontSize: '1.1rem',
             }}
           >
-            ← Back to listings
+            Apply for this position &rarr;
           </a>
         </div>
 
-        <article style={{ background: '#fff', border: '1px solid #eee', borderRadius: 8, padding: '2rem' }}>
-          <header style={{ marginBottom: '2rem', borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>
-            <h1 style={{ fontSize: '2rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>{job.title}</h1>
-            <p style={{ fontSize: '1.2rem', color: '#555', margin: '0 0 1rem 0' }}>{job.company}</p>
-
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.95rem', color: '#666' }}>
-              <div>📍 {job.location}</div>
-              <div>💼 {job.employment_type}</div>
-              <div>📁 {job.category}</div>
-              <div>📅 Posted {postedDate}</div>
-              {job.expires_at && (
-                <div>⏳ Expires {new Date(job.expires_at).toLocaleDateString()}</div>
-              )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+          <div>
+            <div style={detailStyle}>
+              <span style={labelStyle}>📍 Location</span>
+              <span>{job.location}</span>
             </div>
-
-            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <a
-                href={job.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: '#0070f3',
-                  color: '#fff',
-                  borderRadius: 6,
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Apply Now →
-              </a>
-              <div style={{ fontSize: '0.85rem', color: '#999', padding: '0.75rem 0' }}>
-                Source: {job.source} · ID: {job.id}
-              </div>
+            <div style={detailStyle}>
+              <span style={labelStyle}>⏰ Type</span>
+              <span>{job.employment_type}</span>
             </div>
-          </header>
+            <div style={detailStyle}>
+              <span style={labelStyle}>📁 Category</span>
+              <span>{job.category}</span>
+            </div>
+          </div>
+          <div>
+            <div style={detailStyle}>
+              <span style={labelStyle}>🏷️ Source</span>
+              <span>{job.source}</span>
+            </div>
+            <div style={detailStyle}>
+              <span style={labelStyle}>📅 Posted</span>
+              <span>{new Date(job.posted_at).toLocaleDateString()}</span>
+            </div>
+            <div style={detailStyle}>
+              <span style={labelStyle}>🔄 Scraped</span>
+              <span>{new Date(job.scraped_at).toLocaleDateString()}</span>
+            </div>
+          </div>
+        </div>
 
-          <section style={{ marginBottom: '2rem' }}>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '1rem' }}>Job Description</h2>
-            <div
-              style={{
-                lineHeight: 1.6,
-                color: '#333',
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word',
-              }}
-              dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+        {job.description && (
+          <div style={{ marginTop: '3rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', color: '#333' }}>Description</h2>
+            <div 
+              style={{ lineHeight: 1.6, color: '#444', whiteSpace: 'pre-wrap' }}
+              dangerouslySetInnerHTML={{ __html: job.description }}
             />
-          </section>
+          </div>
+        )}
+      </div>
 
-          {relatedJobs && relatedJobs.length > 0 && (
-            <section style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '1rem' }}>Related Jobs</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-                {relatedJobs.map((relatedJob) => (
-                  <a
-                    key={relatedJob.id}
-                    href={getJobPermalink(relatedJob)}
-                    style={{
-                      padding: '1rem',
-                      border: '1px solid #eee',
-                      borderRadius: 6,
-                      textDecoration: 'none',
-                      color: 'inherit',
-                      transition: 'border-color 0.2s',
-                    }}
-                    className="related-job-card"
-                  >
-                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 0.5rem 0', color: '#0070f3' }}>
-                      {relatedJob.title}
-                    </h3>
-                    <p style={{ fontSize: '0.95rem', color: '#555', margin: '0 0 0.5rem 0' }}>{relatedJob.company}</p>
-                    <div style={{ fontSize: '0.85rem', color: '#999' }}>
-                      <div>📍 {relatedJob.location}</div>
-                      <div>💼 {relatedJob.employment_type}</div>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <footer style={{ borderTop: '1px solid #eee', paddingTop: '1rem', fontSize: '0.85rem', color: '#999' }}>
-            <p>Posted on {new Date(job.posted_at).toLocaleString()} · Last updated {new Date(job.updated_at).toLocaleString()}</p>
-          </footer>
-        </article>
-      </main>
-
-      <style>{`
-        .related-job-card {
-          display: block;
-        }
-        .related-job-card:hover {
-          border-color: #0070f3;
-        }
-      `}</style>
-    </>
+      {relatedJobs.length > 0 && (
+        <section style={{ marginTop: '4rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', color: '#333' }}>Related Jobs</h2>
+          <JobList jobs={relatedJobs} />
+        </section>
+      )}
+    </main>
   );
 }

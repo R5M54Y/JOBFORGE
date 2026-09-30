@@ -1,10 +1,22 @@
 import Link from 'next/link';
-import { getJobPermalink } from '@/lib/slugify';
-import type { Job } from '@/lib/types';
+import { Job } from '@/lib/types';
 
 interface Props {
   jobs: Job[];
 }
+
+// Helper function to generate permalink for a job
+const getJobPermalink = (job: Job): string => {
+  // Basic slugification for title and company - can be improved
+  const slug = `${job.title}-${job.company}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove invalid characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, ''); // Trim hyphens from start/end
+
+  return `/jobs/${job.id}?slug=${slug}`; // Use internal ID for routing
+};
 
 export function JobList({ jobs }: Props) {
   if (jobs.length === 0) {
@@ -49,7 +61,7 @@ export function JobList({ jobs }: Props) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  window.open(job.url, '_blank');
+                  window.open(job.url, '_blank', 'noopener noreferrer');
                 }}
                 style={{
                   padding: '0.4rem 1rem',
