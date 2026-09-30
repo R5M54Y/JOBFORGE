@@ -142,6 +142,15 @@ export class Normalize {
       ? raw.jobType[0].trim().toLowerCase().replace(/_/g, '-')
       : 'full-time';
 
+    // FIXED: HTML sanitization for Jobicy descriptions
+    let description = (raw.jobDescription || raw.description || '').trim();
+    // Remove HTML tags, preserve readable text structure
+    description = description
+      .replace(/<[^>]*>/g, ' ')  // Replace tags with single space
+      .replace(/\s+/g, ' ')      // Collapse whitespace
+      .replace(/^\s+|\s+$/g, '') // Trim
+      .replace(/\\s*<\\/\\s*/g, ' '); // Clean up some tag patterns
+
     return {
       id: `jobicy-${sourceJobId}`,
       source: 'jobicy',
@@ -149,7 +158,7 @@ export class Normalize {
       title: (raw.jobTitle || raw.title || '').trim(),
       company: (raw.companyName || '').trim(),
       location: location.trim(),
-      description: (raw.jobDescription || raw.description || '').trim(), // Use jobDescription as primary, fallback to description
+      description,
       url: raw.url || '',
       category,
       employmentType,

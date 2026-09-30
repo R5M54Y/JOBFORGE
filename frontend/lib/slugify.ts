@@ -37,16 +37,26 @@ export function slugify(title: string): string {
 /**
  * Generate canonical job permalink
  * 
- * Format: /jobs/{slug}-{id}
+ * For Jobicy jobs: format is /jobs/jobicy-{sourceJobId}
+ * For other jobs: format is /jobs/{slug}-{id}
  * 
- * @param job Job object with title and id
+ * @param job Job object with title, id, source, and sourceJobId (if available)
  * @returns Canonical permalink path
  * 
  * @example
  * getJobPermalink({ title: "Senior Dev", id: "15654622" })
  * → "/jobs/senior-dev-15654622"
+ * 
+ * getJobPermalink({ title: "Some Job", id: "jobicy-154117", source: "jobicy", sourceJobId: "154117" })
+ * → "/jobs/jobicy-154117"
  */
-export function getJobPermalink(job: { title: string; id: string | number }): string {
+export function getJobPermalink(job: { title: string; id: string | number; source?: string; sourceJobId?: string }): string {
+  // For Jobicy jobs, use source-id format which matches database ID
+  if (job.source === 'jobicy' && job.sourceJobId) {
+    return `/jobs/${job.source}-${job.sourceJobId}`;
+  }
+  
+  // For other jobs, maintain existing slug-id format
   const slug = slugify(job.title);
   return `/jobs/${slug}-${job.id}`;
 }
