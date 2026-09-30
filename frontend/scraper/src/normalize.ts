@@ -143,7 +143,14 @@ export class Normalize {
       : 'full-time';
 
     // FIXED: HTML sanitization for Jobicy descriptions
+    // FIXED: HTML sanitization for Jobicy descriptions
     let description = (raw.jobDescription || raw.description || '').trim();
+    // Remove HTML tags, preserve readable text structure
+    description = description
+      .replace(/<[^>]*>/g, ' ')  // Replace tags with single space
+      .replace(/\s+/g, ' ')      // Collapse whitespace
+      .replace(/^\s+|\s+$/g, '') // Trim
+      .replace(/\s*<\/\s*/g, ' '); // Clean up tag closing patterns
     // Remove HTML tags, preserve readable text structure
     description = description
       .replace(/<[^>]*>/g, ' ')  // Replace tags with single space
