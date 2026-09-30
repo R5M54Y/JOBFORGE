@@ -1,0 +1,16 @@
+{
+  "name": "jobforge",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "scraper"
+  ],
+  "scripts": {
+    "build": "cd frontend && npm run build",
+    "build:all": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

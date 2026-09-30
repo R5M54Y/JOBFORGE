@@ -52,7 +52,8 @@ export interface JobicyJob {
   jobIndustry: string[];
   jobType: string[];
   pubDate: string;
-  description?: string;
+  jobDescription?: string;  // CRITICAL: This is where the real Jobicy description is
+  description?: string;   // Legacy field for compatibility
   annualSalaryMin?: string;
   annualSalaryMax?: string;
   salaryCurrency?: string;

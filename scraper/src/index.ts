@@ -71,7 +71,7 @@ async function runSource(
   }
 }
 
-async function run(): Promise<ScrapeResult> {
+export async function run(): Promise<ScrapeResult> {
   const dbConfig = getDatabaseConfig();
 
   const sources: IJobSource[] = [
@@ -158,8 +158,4 @@ async function run(): Promise<ScrapeResult> {
     await db.close();
   }
 }
-
-run().catch((err) => {
-  console.error('Scraper fatal error:', err);
-  process.exit(1);
-});
+// Export the reusable run function for Vercel Cron

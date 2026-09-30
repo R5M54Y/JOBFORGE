@@ -149,7 +149,7 @@ export class Normalize {
       title: (raw.jobTitle || raw.title || '').trim(),
       company: (raw.companyName || '').trim(),
       location: location.trim(),
-      description: (raw.description || '').trim(),
+      description: (raw.jobDescription || raw.description || '').trim(), // Use jobDescription as primary, fallback to description
       url: raw.url || '',
       category,
       employmentType,
