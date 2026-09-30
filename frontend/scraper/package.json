@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "scrape": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "init-db": "tsx scripts/init-db.ts"
