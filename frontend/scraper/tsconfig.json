@@ -1,0 +1,12 @@
+{
+  "name": "jobforge-frontend-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "typescript": "^5.5.0"
+  }
+}

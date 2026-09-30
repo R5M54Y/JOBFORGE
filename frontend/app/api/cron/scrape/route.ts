@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-// Vercel Cron authentication
+// Vercel cron authentication
 const validateCronSecret = (req: NextRequest): boolean => {
   const vercelCronSecret = req.headers.get('x-vercel-cron-secret');
   const bearerSecret = req.headers.get('authorization');
@@ -32,16 +32,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Use the existing scraper module
-    const path = require('path');
-    const fs = require('fs');
-    const scraperPath = path.join(process.cwd(), 'scraper', 'dist', 'index.js');
-    
-    if (!fs.existsSync(scraperPath)) {
-      throw new Error(`Scraper build not found at ${scraperPath}`);
-    }
-    
-    const { run } = require(scraperPath);
+    // Import the canonical scraper - ES modules for Vercel compatibility
+    // This ensures the scraper is properly bundled in the deployment artifact
+    const { run } = await import('../../../../scraper/src/index');
     const scrapeResult = await run();
     
     return NextResponse.json({
