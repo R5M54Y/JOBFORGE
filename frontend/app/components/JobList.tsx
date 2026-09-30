@@ -1,89 +1,68 @@
+'use client';
+
 import Link from 'next/link';
-import { Job } from '@/lib/types';
+import { getJobPermalink } from '@/lib/slugify'; // Assuming this helper exists and works correctly
+import type { Job } from '@/lib/types';
 
 interface Props {
   jobs: Job[];
 }
 
-// Helper function to generate permalink for a job
-const getJobPermalink = (job: Job): string => {
-  // Basic slugification for title and company - can be improved
-  const slug = `${job.title}-${job.company}`
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '') // Remove invalid characters
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-    .replace(/^-|-$/g, ''); // Trim hyphens from start/end
-
-  return `/jobs/${job.id}?slug=${slug}`; // Use internal ID for routing
-};
-
 export function JobList({ jobs }: Props) {
   if (jobs.length === 0) {
-    return <p style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>No jobs found</p>;
+    return (
+      <div className="text-center text-muted py-5">
+        <p>No jobs found matching your criteria.</p>
+        <p className="small">Try adjusting your search or filters.</p>
+      </div>
+    );
   }
 
   return (
-    <div style={{ display: 'grid', gap: '1rem' }}>
+    <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
       {jobs.map((job) => (
-        <Link
-          key={job.id}
-          href={getJobPermalink(job)}
-          style={{
-            textDecoration: 'none',
-            color: 'inherit',
-          }}
-        >
-          <div
-            style={{
-              background: '#fff',
-              border: '1px solid #eee',
-              borderRadius: 8,
-              padding: '1.25rem',
-              cursor: 'pointer',
-              transition: 'border-color 0.2s, box-shadow 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#0070f3';
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,112,243,0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#eee';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
+        <div key={job.id} className="col">
+          <Link
+            href={getJobPermalink(job)}
+            className="text-decoration-none text-dark"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: '#0070f3' }}>{job.title}</h2>
-                <p style={{ color: '#555', margin: '0.25rem 0' }}>{job.company}</p>
+            <div className="card h-100 shadow-sm border-0 job-card">
+              <div className="card-body d-flex flex-column">
+                <h2 className="h5 fw-bold mb-1 text-primary">
+                  {job.title}
+                </h2>
+                <p className="text-muted mb-2">
+                  {job.company} <span className="text-secondary">•</span> {job.location}
+                </p>
+                <div className="d-flex flex-wrap gap-2 mb-3 small text-secondary">
+                  {job.category && <span>📁 {job.category}</span>}
+                  {job.employment_type && <span>⏰ {job.employment_type}</span>}
+                  {job.source && <span>🏷️ {job.source}</span>}
+                </div>
+                {job.description && (
+                  <p className="card-text text-muted flex-grow-1 mb-3">
+                    {job.description.substring(0, 150)}...
+                  </p>
+                )}
+                <div className="mt-auto d-flex justify-content-between align-items-center pt-3 border-top">
+                  <small className="text-muted">
+                    Posted: {new Date(job.posted_at).toLocaleDateString()}
+                  </small>
+                  <span
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      window.open(job.url, '_blank', 'noopener noreferrer');
+                    }}
+                    className="btn btn-outline-primary btn-sm fw-medium px-3 rounded-pill"
+                  >
+                    Apply &rarr;
+                  </span>
+                </div>
               </div>
-              <span
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  window.open(job.url, '_blank', 'noopener noreferrer');
-                }}
-                style={{
-                  padding: '0.4rem 1rem',
-                  background: '#0070f3',
-                  color: '#fff',
-                  borderRadius: 6,
-                  fontSize: '0.85rem',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                }}
-              >
-                Apply &rarr;
-              </span>
             </div>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '0.5rem', fontSize: '0.85rem', color: '#777' }}>
-              <span>📍 {job.location}</span>
-              <span>📁 {job.category}</span>
-              <span>⏰ {job.employment_type}</span>
-              <span>🏷️ {job.source}</span>
-            </div>
-          </div>
-        </Link>
+          </Link>
+        </div>
       ))}
     </div>
   );

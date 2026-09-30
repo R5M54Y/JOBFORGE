@@ -1,8 +1,13 @@
 import { siteConfig } from '@/lib/siteConfig';
 import Script from 'next/script';
-import './globals.css';
+import './globals.css'; // This now imports Bootstrap CSS
 import type { Metadata } from 'next';
 import { Header } from './components/Header';
+
+// Bootstrap JS (optional, for interactive components if needed, otherwise CSS is sufficient)
+// For simplicity, we'll rely on CSS for layout and styling, not JS initially.
+// If JS components like dropdowns or modals are needed later, uncomment and add:
+// import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 export const metadata: Metadata = {
   title: siteConfig.title,
@@ -29,10 +34,22 @@ export default function RootLayout({
             <img src="//sstatic1.histats.com/0.gif?5052094&101" alt="" />
           </a>
         </noscript>
+        {/* Bootstrap CDN for CSS - Consider local import if preferred/possible */}
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+          crossOrigin="anonymous"
+        />
       </head>
       <body>
         <Header />
-        {children}
+        {/* Using Bootstrap container for responsive layout */}
+        <div className="container py-4">
+          {children}
+        </div>
+        
+        {/* External Scripts - Keep as is, unless deemed problematic */}
         <div
           dangerouslySetInnerHTML={{
             __html: `

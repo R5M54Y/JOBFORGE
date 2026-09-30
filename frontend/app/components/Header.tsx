@@ -5,78 +5,48 @@ import Link from 'next/link';
 
 export function Header() {
   return (
-    <header style={{ 
-      borderBottom: '1px solid #eee', 
-      marginBottom: '2rem',
-      padding: '1rem 0'
-    }}>
-      <div style={{ 
-        maxWidth: 1200, 
-        margin: '0 auto', 
-        padding: '0 1rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
-        <div>
-          <Link 
-            href="/" 
-            style={{ 
-              fontSize: '1.5rem', 
-              fontWeight: 700, 
-              textDecoration: 'none',
-              color: 'inherit'
-            }}
-          >
-            {siteConfig.title}
-          </Link>
-        </div>
+    <header className="navbar navbar-expand-md navbar-light bg-white border-bottom mb-4 py-3">
+      <div className="container">
+        <Link href="/" className="navbar-brand fw-bold fs-4 text-primary">
+          {siteConfig.title}
+        </Link>
         
-        <nav style={{ 
-          display: 'flex', 
-          gap: '1.5rem', 
-          alignItems: 'center',
-          flexWrap: 'wrap'
-        }}>
-          <Link 
-            href="/" 
-            style={{ 
-              textDecoration: 'none', 
-              color: '#666',
-              fontWeight: 500
-            }}
-          >
-            Jobs
-          </Link>
-          <Link 
-            href="/browse-jobs" 
-            style={{ 
-              textDecoration: 'none', 
-              color: '#666',
-              fontWeight: 500
-            }}
-          >
-            Browse
-          </Link>
-          <a
-            href="https://remotive.com/join?via=jobforge"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              padding: '0.5rem 1rem',
-              background: '#0070f3',
-              color: '#fff',
-              borderRadius: 6,
-              textDecoration: 'none',
-              fontWeight: 600,
-              fontSize: '0.95rem'
-            }}
-          >
-            Sign Up
-          </a>
-        </nav>
+        <button 
+          className="navbar-toggler" 
+          type="button" 
+          data-bs-toggle="collapse" 
+          data-bs-target="#navbarNav" 
+          aria-controls="navbarNav" 
+          aria-expanded="false" 
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+
+        <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav ms-auto align-items-center">
+            <li className="nav-item">
+              <Link href="/" className="nav-link fw-medium text-secondary">
+                Jobs
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link href="/browse-jobs" className="nav-link fw-medium text-secondary">
+                Browse
+              </Link>
+            </li>
+            <li className="nav-item ms-md-3 mt-3 mt-md-0">
+              <a
+                href="https://remotive.com/join?via=jobforge"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary fw-bold px-4 rounded-pill"
+              >
+                Sign Up
+              </a>
+            </li>
+          </ul>
+        </div>
       </div>
     </header>
   );

@@ -11,20 +11,22 @@
     "db:init": "tsx scripts/init-db.ts"
   },
   "dependencies": {
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
+    "dotenv": "^16.4.0",
     "next": "14.2.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "pg": "^8.13.0",
-    "dotenv": "^16.4.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.2",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@types/pg": "^8.11.2",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
-    "tsx": "^4.15.0"
+    "tsx": "^4.15.0",
+    "typescript": "^5.5.0"
   }
 }
