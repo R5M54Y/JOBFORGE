@@ -1,0 +1,43 @@
+name: Scraper Workflow
+
+on:
+  schedule:
+    # Run every 6 hours (at minute 0 past every 6th hour)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  run_scraper:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Use a consistent Node.js version
+
+      - name: Install Frontend Dependencies (including scraper dev/prod deps)
+        run: npm install
+        working-directory: ./frontend
+
+      - name: Build Scraper
+        run: npm run build
+        working-directory: ./frontend/scraper
+        env:
+          NODE_ENV: production # Ensure production build settings
+
+      - name: Run Scraper
+        run: node dist/index.js
+        working-directory: ./frontend/scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }} # Pass the DATABASE_URL secret
+          NODE_ENV: production # Ensure scraper runs in production mode
+
+      - name: Report Scraper Completion
+        run: echo "Scraper workflow completed successfully!"
