@@ -1,1 +1,4 @@
 .next/\nnode_modules/\ndist/\n.env\n.env.local\n*.log\n.DS_Store\n*.tsbuildinfo\nnext-env.d.ts
+
+.vercel
+.env*
