@@ -128,47 +128,40 @@ async function migrateJobsId(request: NextRequest): Promise<void> {
       // Phase 6: Safe migration sequence
       console.log('Phase 6: Starting safe migration sequence...');
       
-      // Step 1: Ensure id column is TEXT
-      console.log('Step 1: Ensuring id column is TEXT type...');
-      try {
-        await pool.query('ALTER TABLE jobs ALTER COLUMN id TYPE TEXT');
-      } catch (error) {
-        console.log('Note: id type conversion may require manual intervention');
-      }
+      // Step 1: Add backup column before type conversion
+      console.log('Step 1: Adding backup column backup_id...');
+      await pool.query('ALTER TABLE jobs ADD COLUMN backup_id TEXT');
       
-      // Step 2: Add temporary column for migration
-      console.log('Step 2: Adding temporary temp_id column...');
-      await pool.query('ALTER TABLE jobs ADD COLUMN temp_id TEXT');
+      // Step 2: Populate backup column with current id values
+      console.log('Step 2: Populating backup column with current id values...');
+      await pool.query('UPDATE jobs SET backup_id = id');
       
-      // Step 3: Populate temp_id with new composite IDs
-      console.log('Step 3: Populating temp_id with new composite IDs...');
-      const tempIdQuery = `UPDATE jobs SET temp_id = source || '-' || source_job_id WHERE old_id IS NOT NULL AND LENGTH(old_id) > 0`;
-      const tempIdResult = await pool.query(tempIdQuery);
-      console.log(`Updated ${tempIdResult.rowCount} legacy rows with new temp_id`);
+      // Step 3: Convert id column to TEXT type
+      console.log('Step 3: Converting id column to TEXT type...');
+      await pool.query('ALTER TABLE jobs ALTER COLUMN id TYPE TEXT');
       
-      // Step 4: Verify temp_id population for all legacy rows
-      console.log('Step 4: Verifying temp_id population...');
-      const verifyTempId = await pool.query(
-        'SELECT COUNT(*) FROM jobs WHERE old_id IS NOT NULL AND LENGTH(old_id) > 0 AND temp_id IS NULL'
-      );
-      if (verifyTempId.rows[0].count > 0) {
-        throw new Error(`Error: Some legacy jobs still missing temp_id (${verifyTempId.rows[0].count} rows)`);
-      }
-      
-      // Step 5: Create new primary key on temp_id for temporary uniqueness
-      console.log('Step 5: Creating temporary primary key on temp_id...');
-      await pool.query('ALTER TABLE jobs DROP CONSTRAINT IF EXISTS jobs_pkey');
-      await pool.query('ALTER TABLE jobs ADD CONSTRAINT jobs_temp_id_pk PRIMARY KEY (temp_id)');
-      
-      // Step 6: Create new unique constraint for (source, source_job_id)
-      console.log('Step 6: Creating new source+source_job_id unique constraint...');
-      await pool.query('ALTER TABLE jobs ADD CONSTRAINT jobs_source_sourcejobid_unique UNIQUE (source, source_job_id)');
-      
-      // Step 7: Migrate id column to use temp_id
-      console.log('Step 7: Migrating id column to use temp_id...');
-      const updateIdQuery = `UPDATE jobs SET id = temp_id WHERE old_id IS NOT NULL AND LENGTH(old_id) > 0`;
+      // Step 4: Populate id column with new composite IDs
+      console.log('Step 4: Populating id column with new composite IDs...');
+      const updateIdQuery = `UPDATE jobs SET id = source || '-' || source_job_id WHERE old_id IS NOT NULL AND LENGTH(old_id) > 0`;
       const updateIdResult = await pool.query(updateIdQuery);
-      console.log(`Migrated ${updateIdResult.rowCount} legacy rows from temp_id to id`);
+      console.log(`Updated ${updateIdResult.rowCount} legacy rows with new composite IDs`);
+      
+      // Step 5: Verify id column population
+      console.log('Step 5: Verifying id column population...');
+      const verifyId = await pool.query(
+        'SELECT COUNT(*) FROM jobs WHERE old_id IS NOT NULL AND LENGTH(old_id) > 0 AND id IS NULL'
+      );
+      if (verifyId.rows[0].count > 0) {
+        throw new Error(`Error: Some legacy jobs still missing id (${verifyId.rows[0].count} rows)`);
+      }
+      
+      // Step 6: Create new primary key on id
+      console.log('Step 6: Creating primary key on id...');
+      await pool.query('ALTER TABLE jobs ADD CONSTRAINT jobs_pkey PRIMARY KEY (id)');
+      
+      // Step 7: Create new unique constraint for (source, source_job_id)
+      console.log('Step 7: Creating new source+source_job_id unique constraint...');
+      await pool.query('ALTER TABLE jobs ADD CONSTRAINT jobs_source_sourcejobid_unique UNIQUE (source, source_job_id)');
       
       // Step 8: Verify migration completeness
       console.log('Step 8: Verifying migration completeness...');
@@ -177,7 +170,7 @@ async function migrateJobsId(request: NextRequest): Promise<void> {
          WHERE (old_id IS NULL OR LENGTH(old_id) = 0) 
          AND id IS NOT NULL 
          AND id LIKE '%-%'
-      `);
+        `);
       
       const validFinalIds = verifyMigration.rows[0].count;
       console.log(`Valid final IDs after migration: ${validFinalIds} (expected: ${currentJobs.rows.length})`);
@@ -196,14 +189,13 @@ async function migrateJobsId(request: NextRequest): Promise<void> {
         throw new Error(`CRITICAL: Duplicate final IDs found! Migration aborted.`);
       }
       
-      // Step 10: Remove temporary column
-      console.log('Step 10: Removing temporary temp_id column...');
-      await pool.query('ALTER TABLE jobs DROP CONSTRAINT jobs_temp_id_pk');
-      await pool.query('ALTER TABLE jobs DROP COLUMN temp_id');
+      // Step 10: Remove old_id column (legacy column)
+      console.log('Step 10: Removing legacy old_id column...');
+      await pool.query('ALTER TABLE jobs DROP COLUMN old_id');
       
-      // Step 11: Recreate the correct primary key
-      console.log('Step 11: Recreating primary key on id...');
-      await pool.query('ALTER TABLE jobs ADD CONSTRAINT jobs_pkey PRIMARY KEY (id)');
+      // Step 11: Remove backup column
+      console.log('Step 11: Removing backup column...');
+      await pool.query('ALTER TABLE jobs DROP COLUMN backup_id');
       
       // Step 12: Final validation
       console.log('Step 12: Performing final validation...');
@@ -212,17 +204,12 @@ async function migrateJobsId(request: NextRequest): Promise<void> {
          COUNT(*) as total_rows,
          COUNT(DISTINCT id) as unique_ids,
          COUNT(*) FILTER (WHERE id IS NULL) as null_ids,
-         COUNT(*) FILTER (WHERE id IS NOT NULL AND id NOT LIKE '%-%') as invalid_format_ids,
-         COUNT(*) FILTER (WHERE old_id IS NOT NULL AND LENGTH(old_id) > 0) as legacy_still_present
+         COUNT(*) FILTER (WHERE id IS NOT NULL AND id NOT LIKE '%-%') as invalid_format_ids
          FROM jobs`
       );
       
       const finalStats = finalValidation.rows[0];
-      console.log(`Final stats: ${finalStats.total_rows} total rows, ${finalStats.unique_ids} unique IDs, ${finalStats.null_ids} null IDs, ${finalStats.invalid_format_ids} invalid format IDs, ${finalStats.legacy_still_present} legacy rows still present`);
-      
-      if (finalStats.legacy_still_present > 0) {
-        throw new Error(`Migration incomplete: ${finalStats.legacy_still_present} legacy rows still have old_id`);
-      }
+      console.log(`Final stats: ${finalStats.total_rows} total rows, ${finalStats.unique_ids} unique IDs, ${finalStats.null_ids} null IDs, ${finalStats.invalid_format_ids} invalid format IDs`);
       
       if (finalStats.null_ids > 0) {
         throw new Error(`Migration incomplete: ${finalStats.null_ids} rows have NULL id`);
