@@ -20,7 +20,13 @@ export async function GET(
 
     const pool = getPool();
     const result = await pool.query(
-      `SELECT * FROM jobs WHERE id = $1 AND is_active = TRUE LIMIT 1`,
+      `SELECT id, source, source_job_id, title, company, location, 
+          description, url, category, employment_type, 
+          posted_at, scraped_at, expires_at, is_active, 
+          created_at, updated_at 
+       FROM jobs 
+       WHERE id = $1 AND is_active = TRUE 
+       LIMIT 1`,
       [id]
     );
 

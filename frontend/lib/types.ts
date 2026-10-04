@@ -1,8 +1,7 @@
 // JOBFORGE Frontend - Type Definitions
 
 export interface Job {
-  id: string; // Internal BIGINT ID (as string for JS safety)
-  old_id?: string; // Legacy composite ID (source-source_job_id) - deprecated
+  id: string; // Canonical composite ID (e.g., "jobicy-154414")
   source: string;
   source_job_id: string;
   title: string;
