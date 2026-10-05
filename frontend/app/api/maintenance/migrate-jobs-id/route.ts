@@ -109,8 +109,8 @@ async function migrateJobsId(request: NextRequest): Promise<void> {
       // Phase 6: Safe migration sequence
       console.log('Phase 6: Starting safe migration sequence...');
       
-      // Step 3: Check if id is an identity column and handle accordingly
-      console.log('Step 3a: Checking if id is an identity column...');
+      // STEP 1: Check if id is an identity column and handle accordingly
+      console.log('Step 1a: Checking if id is an identity column...');
       const identityCheck = await client.query(
         `SELECT 
            column_name,
@@ -124,7 +124,7 @@ async function migrateJobsId(request: NextRequest): Promise<void> {
       const isIdentityColumn = identityCheck.rows[0]?.is_identity === 'YES';
       
       if (isIdentityColumn) {
-        console.log('Step 3b: Dropping identity from id column before TEXT conversion...');
+        console.log('Step 1b: Dropping identity from id column before TEXT conversion...');
         await client.query('ALTER TABLE public.jobs ALTER COLUMN id DROP IDENTITY IF EXISTS');
         
         // Verify identity was dropped
@@ -144,7 +144,15 @@ async function migrateJobsId(request: NextRequest): Promise<void> {
         }
       }
       
-      console.log('Step 3: Converting id column to TEXT type...');
+      // STEP 2: Add backup column before type conversion
+      console.log('Step 2: Adding backup column backup_id...');
+      await client.query('ALTER TABLE jobs ADD COLUMN backup_id TEXT');
+      
+      // Step 3: Populate backup column with current id values
+      console.log('Step 3: Populating backup column with current id values...');
+      await client.query('UPDATE jobs SET backup_id = id');
+      
+      console.log('Step 4: Converting id column to TEXT type...');
       await client.query('ALTER TABLE jobs ALTER COLUMN id TYPE TEXT');
       
       // Step 4: Populate id column with new composite IDs
