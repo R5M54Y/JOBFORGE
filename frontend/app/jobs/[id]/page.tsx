@@ -25,6 +25,63 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+// Map employment types to Schema.org standards
+function mapEmploymentType(type: string): string {
+  const mapping: Record<string, string> = {
+    'full-time': 'FULL_TIME',
+    'part-time': 'PART_TIME',
+    'contract': 'CONTRACTOR',
+    'freelance': 'CONTRACTOR',
+    'temporary': 'TEMPORARY',
+    'intern': 'INTERN',
+    'volunteer': 'VOLUNTEER',
+    'per-diem': 'PER_DIEM',
+    'other': 'OTHER'
+  };
+  return mapping[type.toLowerCase()] || 'OTHER';
+}
+
+// Generate JobPosting structured data
+function generateJobPostingSchema(job: Job, url: string) {
+  // Parse location - handle "City, Country" format
+  const locations = job.location.split(',').map(l => l.trim());
+  
+  const schema = {
+    '@context': 'https://schema.org/',
+    '@type': 'JobPosting',
+    title: job.title,
+    description: job.description || `${job.title} position at ${job.company}`,
+    datePosted: new Date(job.posted_at).toISOString().split('T')[0],
+    hiringOrganization: {
+      '@type': 'Organization',
+      name: job.company
+    },
+    jobLocation: locations.map(loc => ({
+      '@type': 'Place',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: loc,
+        addressCountry: loc
+      }
+    })),
+    employmentType: mapEmploymentType(job.employment_type),
+    url: url,
+    identifier: {
+      '@type': 'PropertyValue',
+      name: job.source,
+      value: job.source_job_id
+    },
+    applicantLocationRequirements: locations.length > 0 ? {
+      '@type': 'Country',
+      name: locations[locations.length - 1]
+    } : undefined,
+    jobLocationType: job.location.toLowerCase().includes('remote') ? 'TELECOMMUTE' : undefined
+  };
+
+  // Remove undefined fields
+  return JSON.parse(JSON.stringify(schema));
+}
+
 export default async function JobDetailPage({ params }: Props) {
   let job = await getJobById(params.id);
   
@@ -36,9 +93,24 @@ export default async function JobDetailPage({ params }: Props) {
   if (!job) notFound();
 
   const relatedJobs = await getRelatedJobs(job.id, job.category || '', 3);
+  
+  // Generate canonical URL
+  const canonicalUrl = `https://remoteworkers.vercel.app/jobs/${job.id}`;
+  
+  // Generate structured data
+  const structuredData = generateJobPostingSchema(job, canonicalUrl);
 
   return (
-    <main className="container py-5" id="job-detail-main">
+    <>
+      {/* Structured Data for Google Jobs */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData)
+        }}
+      />
+      
+      <main className="container py-5" id="job-detail-main">
       <div className="mb-4" id="job-detail-back-button-wrapper">
         <Link href="/" className="btn btn-link text-decoration-none p-0 text-primary fw-medium">
           &larr; Back to all jobs
@@ -134,5 +206,6 @@ export default async function JobDetailPage({ params }: Props) {
         </section>
       )}
     </main>
+    </>
   );
 }
