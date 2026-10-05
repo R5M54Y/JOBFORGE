@@ -101,6 +101,15 @@ export default async function JobDetailPage({ params }: Props) {
             </div>
           </div>
 
+          {/* Ad placement before job description */}
+          <div className="mb-5">
+            <div
+              dangerouslySetInnerHTML={{
+                __html: '<script async="async" data-cfasync="false" src="https://pl31517494.profitableratecpmnetwork.com/93be112345a2807dbde6fc7c69a63baf/invoke.js"></script><div id="container-93be112345a2807dbde6fc7c69a63baf"></div>'
+              }}
+            />
+          </div>
+
           {job.description && (
             <div>
               <h5 className="fw-bold text-dark mb-3">Job Description</h5>
