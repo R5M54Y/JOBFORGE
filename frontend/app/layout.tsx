@@ -1,13 +1,8 @@
 import { siteConfig } from '@/lib/siteConfig';
 import Script from 'next/script';
-import './globals.css'; // This now imports Bootstrap CSS
+import './globals.css';
 import type { Metadata } from 'next';
 import { Header } from './components/Header';
-
-// Bootstrap JS (optional, for interactive components if needed, otherwise CSS is sufficient)
-// For simplicity, we'll rely on CSS for layout and styling, not JS initially.
-// If JS components like dropdowns or modals are needed later, uncomment and add:
-// import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 export const metadata: Metadata = {
   title: siteConfig.title,
@@ -34,7 +29,7 @@ export default function RootLayout({
             <img src="//sstatic1.histats.com/0.gif?5052094&101" alt="" />
           </a>
         </noscript>
-        {/* Bootstrap CDN for CSS - Consider local import if preferred/possible */}
+        {/* Bootstrap CDN for CSS */}
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
@@ -49,15 +44,26 @@ export default function RootLayout({
           {children}
         </div>
         
-        {/* External Scripts - Keep as is, unless deemed problematic */}
-        <div
+        {/* Histats tracking - inline initialization before script load */}
+        <Script
+          id="histats-init"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-<script type="text/javascript">
 var _Hasync = _Hasync || [];
 _Hasync.push(['Histats.start', '1,5052094,4,511,95,18,00000000']);
 _Hasync.push(['Histats.fasi', '1']);
 _Hasync.push(['Histats.track_hits', '']);
+            `
+          }}
+        />
+        
+        {/* Histats loader script */}
+        <Script
+          id="histats-loader"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
 (function() {
   var hs = document.createElement('script');
   hs.type = 'text/javascript';
@@ -65,11 +71,14 @@ _Hasync.push(['Histats.track_hits', '']);
   hs.src = ('//s10.histats.com/js15_as.js');
   (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(hs);
 })();
-</script>
-<script src="https://pl31517511.profitableratecpmnetwork.com/0a/6f/45/0a6f45f6cd118b7b19498f9076f1a08f.js"></script>
             `
           }}
-          style={{ display: 'none' }}
+        />
+        
+        {/* Third-party monetization script - loaded after interactive */}
+        <Script
+          src="https://pl31517511.profitableratecpmnetwork.com/0a/6f/45/0a6f45f6cd118b7b19498f9076f1a08f.js"
+          strategy="afterInteractive"
         />
       </body>
     </html>

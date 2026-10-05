@@ -91,11 +91,11 @@ export default async function JobDetailPage({ params }: Props) {
                 </li>
                 <li className="mb-2">
                   <span className="fw-bold text-secondary text-uppercase small me-2">📅 Posted:</span>
-                  <span className="text-dark">{new Date(job.posted_at).toLocaleDateString()}</span>
+                  <span className="text-dark">{new Date(job.posted_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
                 </li>
                 <li className="mb-2">
                   <span className="fw-bold text-secondary text-uppercase small me-2">🔄 Scraped:</span>
-                  <span className="text-dark">{new Date(job.scraped_at).toLocaleDateString()}</span>
+                  <span className="text-dark">{new Date(job.scraped_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
                 </li>
               </ul>
             </div>

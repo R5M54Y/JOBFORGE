@@ -46,7 +46,7 @@ export function JobList({ jobs }: Props) {
                 )}
                 <div className="mt-auto d-flex justify-content-between align-items-center pt-3 border-top">
                   <small className="text-muted">
-                    Posted: {new Date(job.posted_at).toLocaleDateString()}
+                    Posted: {new Date(job.posted_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                   </small>
                   <span
                     onClick={(e) => {
