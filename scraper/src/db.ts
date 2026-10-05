@@ -47,17 +47,19 @@ export class Database {
   }
 
   private async ensureIdIdentity(): Promise<void> {
-    const fixSql = `
-      -- Create sequence if it doesn't exist
-      CREATE SEQUENCE IF NOT EXISTS jobs_id_seq;
+    // Create sequence if it doesn't exist (separate query)
+    await this.pool.query('CREATE SEQUENCE IF NOT EXISTS jobs_id_seq');
 
-      -- Set the sequence as default for id column (idempotent)
-      ALTER TABLE jobs ALTER COLUMN id SET DEFAULT nextval('jobs_id_seq');
+    // Set the sequence as default for id column (separate query)
+    await this.pool.query('ALTER TABLE jobs ALTER COLUMN id SET DEFAULT nextval(\'jobs_id_seq\')');
 
-      -- Set sequence to start after highest existing id
-      SELECT setval('jobs_id_seq', COALESCE((SELECT MAX(id) FROM jobs), 0) + 1);
-    `;
-    await this.pool.query(fixSql);
+    // Get max id and set sequence start (explicit type handling in JS)
+    const maxResult = await this.pool.query('SELECT COALESCE(MAX(id), 0) as max_id FROM jobs');
+    const maxId = maxResult.rows[0].max_id || 0;
+    const nextId = parseInt(String(maxId)) + 1;
+    
+    await this.pool.query('SELECT setval(\'jobs_id_seq\', $1)', [nextId]);
+    
     console.log('ID identity generation ensured');
   }
 
