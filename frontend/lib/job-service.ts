@@ -176,53 +176,68 @@ export async function getLocationsWithCounts(): Promise<Array<{ location: string
   }
 }
 
-export function generateSlug(title: string): string {
-  return title
+export function generateSlug(title: string, id?: string | number): string {
+  const baseSlug = title
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
     .replace(/\s+/g, '-')         // Replace spaces with hyphens
     .replace(/-+/g, '-')           // Replace multiple hyphens with single hyphen
     .replace(/^-|-$/g, '');        // Remove leading/trailing hyphens
+
+  // If ID provided, append it to create canonical slug
+  return id !== undefined ? `${baseSlug}-${id}` : baseSlug;
+}
+
+export function generateJobSlug(job: Job): string {
+  return generateSlug(job.title, job.id);
 }
 
 export async function getJobBySlug(slug: string): Promise<Job | null> {
   const pool = getPool();
   try {
-    // Search for job where the slug generated from title matches the requested slug
-    const result = await pool.query(
-      `SELECT id, source, source_job_id, title, company, location, 
-              description, url, category, employment_type, 
-              posted_at, scraped_at, expires_at, is_active, 
-              created_at, updated_at 
-       FROM jobs 
-       WHERE is_active = TRUE 
-       LIMIT 100`
-    );
+    // Extract potential ID from end of slug (e.g., "content-writer-4373" -> "4373")
+    const slugParts = slug.split('-');
+    const lastPart = slugParts[slugParts.length - 1];
+    const potentialId = /^\d+$/.test(lastPart) ? lastPart : null;
 
-    // Find job where generated slug matches requested slug
-    for (const row of result.rows) {
-      const job: Job = {
-        id: row.id,
-        source: row.source,
-        source_job_id: row.source_job_id,
-        title: row.title,
-        company: row.company,
-        location: row.location,
-        description: row.description,
-        url: row.url,
-        category: row.category,
-        employment_type: row.employment_type,
-        posted_at: row.posted_at,
-        scraped_at: row.scraped_at,
-        expires_at: row.expires_at,
-        is_active: row.is_active,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        slug: generateSlug(row.title)
-      };
-      
-      if (job.slug === slug) {
-        return job;
+    if (potentialId) {
+      // Try direct ID lookup first for efficiency
+      const result = await pool.query(
+        `SELECT id, source, source_job_id, title, company, location, 
+                description, url, category, employment_type, 
+                posted_at, scraped_at, expires_at, is_active, 
+                created_at, updated_at 
+         FROM jobs 
+         WHERE id = $1 AND is_active = TRUE 
+         LIMIT 1`,
+        [potentialId]
+      );
+
+      if (result.rows.length > 0) {
+        const job: Job = {
+          id: result.rows[0].id,
+          source: result.rows[0].source,
+          source_job_id: result.rows[0].source_job_id,
+          title: result.rows[0].title,
+          company: result.rows[0].company,
+          location: result.rows[0].location,
+          description: result.rows[0].description,
+          url: result.rows[0].url,
+          category: result.rows[0].category,
+          employment_type: result.rows[0].employment_type,
+          posted_at: result.rows[0].posted_at,
+          scraped_at: result.rows[0].scraped_at,
+          expires_at: result.rows[0].expires_at,
+          is_active: result.rows[0].is_active,
+          created_at: result.rows[0].created_at,
+          updated_at: result.rows[0].updated_at,
+          slug: generateJobSlug(result.rows[0])
+        };
+
+        // Verify the generated slug matches the requested slug
+        if (job.slug === slug) {
+          return job;
+        }
       }
     }
 
