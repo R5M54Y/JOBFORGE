@@ -41,6 +41,24 @@ export class Database {
     `;
     await this.pool.query(sql);
     console.log('Database schema initialized');
+
+    // Ensure id column has proper default generation (fixes existing tables)
+    await this.ensureIdIdentity();
+  }
+
+  private async ensureIdIdentity(): Promise<void> {
+    const fixSql = `
+      -- Create sequence if it doesn't exist
+      CREATE SEQUENCE IF NOT EXISTS jobs_id_seq;
+
+      -- Set the sequence as default for id column (idempotent)
+      ALTER TABLE jobs ALTER COLUMN id SET DEFAULT nextval('jobs_id_seq');
+
+      -- Set sequence to start after highest existing id
+      SELECT setval('jobs_id_seq', COALESCE((SELECT MAX(id) FROM jobs), 0) + 1);
+    `;
+    await this.pool.query(fixSql);
+    console.log('ID identity generation ensured');
   }
 
   async upsertMany(jobs: Job[]): Promise<{ upserted: number; failed: number }> {
