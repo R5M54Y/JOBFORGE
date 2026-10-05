@@ -53,8 +53,8 @@ export class Database {
     // Set the sequence as default for id column (separate query)
     await this.pool.query('ALTER TABLE jobs ALTER COLUMN id SET DEFAULT nextval(\'jobs_id_seq\')');
 
-    // Get max id and set sequence start (explicit type handling in JS)
-    const maxResult = await this.pool.query('SELECT COALESCE(MAX(id), 0) as max_id FROM jobs');
+    // Get max id with explicit BIGINT cast to handle TEXT columns in production
+    const maxResult = await this.pool.query('SELECT COALESCE(MAX(id)::BIGINT, 0) as max_id FROM jobs');
     const maxId = maxResult.rows[0].max_id || 0;
     const nextId = parseInt(String(maxId)) + 1;
     
