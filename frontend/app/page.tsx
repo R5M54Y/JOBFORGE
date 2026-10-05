@@ -3,6 +3,7 @@
 import { siteConfig } from '@/lib/siteConfig';
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Script from 'next/script';
 import { JobFilters } from './components/JobFilters';
 import { JobList } from './components/JobList';
 import { Pagination } from './components/Pagination';
@@ -74,10 +75,17 @@ function HomeContent() {
       ) : (
         <>
           {/* Ad placement before job list */}
-          <div id="homepage-ad-container" style={{ marginBottom: '2rem' }}>
-            <div
-              dangerouslySetInnerHTML={{
-                __html: '<script async="async" data-cfasync="false" src="https://pl31517494.profitableratecpmnetwork.com/93be112345a2807dbde6fc7c69a63baf/invoke.js"></script><div id="container-93be112345a2807dbde6fc7c69a63baf"></div>'
+          <div id="homepage-ad-container" style={{ marginBottom: '2rem', minHeight: '250px' }}>
+            <div id="container-93be112345a2807dbde6fc7c69a63baf" />
+            <Script
+              src="https://pl31517494.profitableratecpmnetwork.com/93be112345a2807dbde6fc7c69a63baf/invoke.js"
+              strategy="afterInteractive"
+              async
+              onLoad={() => {
+                // Ensure ad network script can find container
+                if (window && (window as any)._ads) {
+                  (window as any)._ads.render('container-93be112345a2807dbde6fc7c69a63baf');
+                }
               }}
             />
           </div>
