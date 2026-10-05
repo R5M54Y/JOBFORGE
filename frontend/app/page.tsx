@@ -60,21 +60,21 @@ function HomeContent() {
   };
 
   return (
-    <main style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1rem' }}>
+    <main style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1rem' }} id="home-main">
       <JobFilters filters={filters} onChange={handleFilterChange} />
 
       {error && (
-        <div style={{ padding: '1rem', background: '#fee', color: '#c00', borderRadius: 8, margin: '1rem 0' }}>
+        <div id="home-error-alert" style={{ padding: '1rem', background: '#fee', color: '#c00', borderRadius: 8, margin: '1rem 0' }}>
           {error}
         </div>
       )}
 
       {loading ? (
-        <p style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>Loading jobs...</p>
+        <p id="home-loading-message" style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>Loading jobs...</p>
       ) : (
         <>
           {/* Ad placement before job list */}
-          <div style={{ marginBottom: '2rem' }}>
+          <div id="homepage-ad-container" style={{ marginBottom: '2rem' }}>
             <div
               dangerouslySetInnerHTML={{
                 __html: '<script async="async" data-cfasync="false" src="https://pl31517494.profitableratecpmnetwork.com/93be112345a2807dbde6fc7c69a63baf/invoke.js"></script><div id="container-93be112345a2807dbde6fc7c69a63baf"></div>'
@@ -82,7 +82,9 @@ function HomeContent() {
             />
           </div>
 
-          <JobList jobs={jobs} />
+          <div id="homepage-job-list-wrapper">
+            <JobList jobs={jobs} />
+          </div>
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
       )}
