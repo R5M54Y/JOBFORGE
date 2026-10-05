@@ -8,7 +8,7 @@ export function Footer() {
         <div className="row">
           <div className="col-md-6 mb-3 mb-md-0">
             <h5 className="mb-3 text-white">{siteConfig.title}</h5>
-            <p className="text-muted small">
+            <p className="text-light small">
               Find remote jobs from multiple sources in one place. Your gateway to remote work opportunities worldwide.
             </p>
           </div>
@@ -16,12 +16,12 @@ export function Footer() {
             <h6 className="mb-3 text-white">Quick Links</h6>
             <ul className="list-unstyled">
               <li className="mb-2">
-                <Link href="/" className="text-white-50 text-decoration-none small hover-text-white">
+                <Link href="/" className="text-white text-decoration-none small" style={{ opacity: 0.9 }}>
                   Home
                 </Link>
               </li>
               <li className="mb-2">
-                <Link href="/browse-jobs" className="text-white-50 text-decoration-none small hover-text-white">
+                <Link href="/browse-jobs" className="text-white text-decoration-none small" style={{ opacity: 0.9 }}>
                   Browse Jobs
                 </Link>
               </li>
@@ -31,7 +31,7 @@ export function Footer() {
             <h6 className="mb-3 text-white">Legal</h6>
             <ul className="list-unstyled">
               <li className="mb-2">
-                <Link href="/privacy-policy" className="text-white-50 text-decoration-none small hover-text-white">
+                <Link href="/privacy-policy" className="text-white text-decoration-none small" style={{ opacity: 0.9 }}>
                   Privacy Policy
                 </Link>
               </li>
@@ -41,7 +41,7 @@ export function Footer() {
         <hr className="my-4 border-secondary" />
         <div className="row">
           <div className="col-12 text-center">
-            <p className="text-muted small mb-0">
+            <p className="text-light small mb-0">
               &copy; {new Date().getFullYear()} {siteConfig.title}. All rights reserved.
             </p>
           </div>
