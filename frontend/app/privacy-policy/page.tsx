@@ -1,9 +1,10 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { siteConfig } from '@/lib/siteConfig';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | Remote Workers',
-  description: 'Privacy Policy for Remote Workers job board',
+  title: `Privacy Policy | ${siteConfig.title}`,
+  description: `Privacy Policy for ${siteConfig.title} job board`,
 };
 
 export default function PrivacyPolicyPage() {
@@ -25,7 +26,7 @@ export default function PrivacyPolicyPage() {
           <section className="mb-5">
             <h2 className="h4 fw-bold text-dark mb-3">1. Introduction</h2>
             <p className="text-muted lh-lg">
-              Welcome to Remote Workers (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your privacy. 
+              Welcome to {siteConfig.title} (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your privacy. 
               This Privacy Policy explains how we collect, use, disclose, and safeguard your information when 
               you visit our website and use our job board services.
             </p>
@@ -63,7 +64,7 @@ export default function PrivacyPolicyPage() {
           <section className="mb-5">
             <h2 className="h4 fw-bold text-dark mb-3">4. Third-Party Job Sources</h2>
             <p className="text-muted lh-lg">
-              Remote Workers aggregates job listings from various third-party sources including Jobicy and Remotive. 
+              {siteConfig.title} aggregates job listings from various third-party sources including Jobicy and Remotive. 
               When you click &quot;Apply&quot; on a job listing, you will be redirected to the employer&apos;s website or the 
               original job source. We are not responsible for the privacy practices of these external sites. 
               We encourage you to read their privacy policies before submitting any personal information.
@@ -142,7 +143,7 @@ export default function PrivacyPolicyPage() {
 
           <div className="alert alert-light border mt-5" role="alert">
             <p className="mb-0 small text-muted">
-              <strong>Note:</strong> By using Remote Workers, you acknowledge that you have read and understood 
+              <strong>Note:</strong> By using {siteConfig.title}, you acknowledge that you have read and understood 
               this Privacy Policy and agree to be bound by its terms.
             </p>
           </div>
