@@ -2,6 +2,7 @@
 
 export interface Job {
   id: string; // Canonical composite ID (e.g., "jobicy-154414")
+  slug: string; // SEO-friendly slug (e.g., "content-writer-eastern-canada-4373")
   source: string;
   source_job_id: string;
   title: string;

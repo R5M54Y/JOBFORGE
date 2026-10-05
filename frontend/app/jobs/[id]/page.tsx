@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getJobById, getRelatedJobs } from '@/lib/job-service';
+import { getJobById, getJobBySlug, getRelatedJobs } from '@/lib/job-service';
 import { JobList } from '@/app/components/JobList';
 import type { Job } from '@/lib/types';
 import Link from 'next/link';
@@ -10,7 +10,13 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const job = await getJobById(params.id);
+  let job = await getJobById(params.id);
+  
+  // Fallback to slug lookup if canonical ID not found
+  if (!job) {
+    job = await getJobBySlug(params.id);
+  }
+  
   if (!job) return { title: 'Job Not Found | JOBFORGE' };
   
   return {
@@ -20,7 +26,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function JobDetailPage({ params }: Props) {
-  const job = await getJobById(params.id);
+  let job = await getJobById(params.id);
+  
+  // Fallback to slug lookup if canonical ID not found
+  if (!job) {
+    job = await getJobBySlug(params.id);
+  }
+  
   if (!job) notFound();
 
   const relatedJobs = await getRelatedJobs(job.id, job.category || '', 3);

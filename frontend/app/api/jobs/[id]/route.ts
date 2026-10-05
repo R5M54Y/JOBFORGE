@@ -1,6 +1,6 @@
 // JOBFORGE API - Individual job endpoint
 import { NextRequest, NextResponse } from 'next/server';
-import { getPool } from '@/lib/db';
+import { getJobById, getJobBySlug } from '@/lib/job-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,26 +18,19 @@ export async function GET(
       );
     }
 
-    const pool = getPool();
-    const result = await pool.query(
-      `SELECT id, source, source_job_id, title, company, location, 
-          description, url, category, employment_type, 
-          posted_at, scraped_at, expires_at, is_active, 
-          created_at, updated_at 
-       FROM jobs 
-       WHERE id = $1 AND is_active = TRUE 
-       LIMIT 1`,
-      [id]
-    );
+    let job = await getJobById(id);
+    
+    // Fallback to slug lookup if canonical ID not found
+    if (!job) {
+      job = await getJobBySlug(id);
+    }
 
-    if (result.rows.length === 0) {
+    if (!job) {
       return NextResponse.json(
         { error: 'Job not found' },
         { status: 404 }
       );
     }
-
-    const job = result.rows[0];
 
     return NextResponse.json(job);
   } catch (error) {
