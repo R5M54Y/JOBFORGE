@@ -73,6 +73,15 @@ function HomeContent() {
         <p style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>Loading jobs...</p>
       ) : (
         <>
+          {/* Ad placement before job list */}
+          <div style={{ marginBottom: '2rem' }}>
+            <div
+              dangerouslySetInnerHTML={{
+                __html: '<script async="async" data-cfasync="false" src="https://pl31517494.profitableratecpmnetwork.com/93be112345a2807dbde6fc7c69a63baf/invoke.js"></script><div id="container-93be112345a2807dbde6fc7c69a63baf"></div>'
+              }}
+            />
+          </div>
+
           <JobList jobs={jobs} />
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
