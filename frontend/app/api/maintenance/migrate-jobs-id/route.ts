@@ -14,6 +14,12 @@ type MigrationStats = {
   legacyColumnPresentAfter: boolean;
 };
 
+type PrimaryKeyInfo = {
+  conname: string;
+  definition: string;
+  columns: string[];
+};
+
 async function verifyCronSecret(request: NextRequest): Promise<boolean> {
   const providedSecret =
     request.headers.get('x-cron-secret') ||
@@ -24,6 +30,32 @@ async function verifyCronSecret(request: NextRequest): Promise<boolean> {
 
 function quoteIdentifier(identifier: string): string {
   return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function parsePgArray<T = string>(value: unknown): T[] {
+  if (Array.isArray(value)) {
+    return value as T[];
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error(
+      `Unable to parse PostgreSQL array: expected string or array, received ${typeof value}`
+    );
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+
+    if (!Array.isArray(parsed)) {
+      throw new Error('Parsed value is not an array');
+    }
+
+    return parsed as T[];
+  } catch {
+    throw new Error(
+      `Unable to parse PostgreSQL array value: ${JSON.stringify(value)}`
+    );
+  }
 }
 
 async function getColumnType(
@@ -44,6 +76,48 @@ async function getColumnType(
   return result.rows.length > 0 ? result.rows[0].data_type : null;
 }
 
+async function getPrimaryKey(
+  client: PoolClient
+): Promise<PrimaryKeyInfo | null> {
+  const result = await client.query(
+    `
+      SELECT
+        c.conname,
+        pg_get_constraintdef(c.oid) AS definition,
+        array_to_json(
+          array_agg(a.attname ORDER BY k.ordinality)
+        )::text AS columns
+      FROM pg_constraint c
+      JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ordinality)
+        ON true
+      JOIN pg_attribute a
+        ON a.attrelid = c.conrelid
+       AND a.attnum = k.attnum
+      WHERE c.conrelid = 'public.jobs'::regclass
+        AND c.contype = 'p'
+      GROUP BY c.oid, c.conname
+    `
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  if (result.rows.length > 1) {
+    throw new Error(
+      'Migration aborted: jobs has multiple primary key constraints'
+    );
+  }
+
+  const row = result.rows[0];
+
+  return {
+    conname: row.conname,
+    definition: row.definition,
+    columns: parsePgArray<string>(row.columns),
+  };
+}
+
 async function migrateJobsId(): Promise<MigrationStats> {
   const dbConfig = getDatabaseConfig();
 
@@ -60,11 +134,6 @@ async function migrateJobsId(): Promise<MigrationStats> {
 
     client = await pool.connect();
 
-    /*
-     * Everything below uses the same PoolClient.
-     * This guarantees that BEGIN/COMMIT/ROLLBACK apply
-     * to the same PostgreSQL session.
-     */
     await client.query('BEGIN');
     transactionStarted = true;
 
@@ -80,7 +149,9 @@ async function migrateJobsId(): Promise<MigrationStats> {
     );
 
     if (!tableResult.rows[0]?.table_name) {
-      throw new Error('Migration aborted: public.jobs table does not exist');
+      throw new Error(
+        'Migration aborted: public.jobs table does not exist'
+      );
     }
 
     /*
@@ -103,7 +174,9 @@ async function migrateJobsId(): Promise<MigrationStats> {
     );
 
     if (idColumnResult.rows.length === 0) {
-      throw new Error('Migration aborted: jobs.id column does not exist');
+      throw new Error(
+        'Migration aborted: jobs.id column does not exist'
+      );
     }
 
     const idColumn = idColumnResult.rows[0];
@@ -131,43 +204,22 @@ async function migrateJobsId(): Promise<MigrationStats> {
 
     /*
      * ------------------------------------------------------------------
-     * PHASE 3: Determine whether migration is actually needed
+     * PHASE 3: Already-migrated check
      * ------------------------------------------------------------------
-     *
-     * IMPORTANT:
-     * Presence/absence of old_id is NOT used to determine whether
-     * jobs.id needs migration.
      */
-    if (idTypeBefore === 'text') {
-      /*
-       * The physical schema is already correct.
-       *
-       * If old_id still exists, remove it only if it is safe and
-       * the migration is explicitly in the expected legacy state.
-       *
-       * For this one-time migration, we require old_id to be absent
-       * before declaring the schema fully complete.
-       */
-      if (!hasOldId) {
-        await client.query('ROLLBACK');
-        transactionStarted = false;
+    if (idTypeBefore === 'text' && !hasOldId) {
+      await client.query('ROLLBACK');
+      transactionStarted = false;
 
-        return {
-          rowsBefore: 0,
-          rowsAfter: 0,
-          rowsUpdated: 0,
-          idTypeBefore,
-          idTypeAfter: idTypeBefore,
-          legacyColumnPresentBefore: false,
-          legacyColumnPresentAfter: false,
-        };
-      }
-
-      /*
-       * id is already TEXT but old_id remains.
-       * We continue through validation/cleanup below rather than
-       * assuming migration is unnecessary.
-       */
+      return {
+        rowsBefore: 0,
+        rowsAfter: 0,
+        rowsUpdated: 0,
+        idTypeBefore,
+        idTypeAfter: idTypeBefore,
+        legacyColumnPresentBefore: false,
+        legacyColumnPresentAfter: false,
+      };
     }
 
     /*
@@ -176,7 +228,10 @@ async function migrateJobsId(): Promise<MigrationStats> {
      * ------------------------------------------------------------------
      */
     const countBeforeResult = await client.query(
-      `SELECT COUNT(*)::bigint AS count FROM public.jobs`
+      `
+        SELECT COUNT(*)::bigint AS count
+        FROM public.jobs
+      `
     );
 
     const rowsBefore = Number(countBeforeResult.rows[0].count);
@@ -188,37 +243,12 @@ async function migrateJobsId(): Promise<MigrationStats> {
      * PHASE 5: Inspect PK
      * ------------------------------------------------------------------
      */
-    const primaryKeyResult = await client.query(
-      `
-        SELECT
-          c.conname,
-          pg_get_constraintdef(c.oid) AS definition,
-          array_agg(a.attname ORDER BY k.ordinality) AS columns
-        FROM pg_constraint c
-        JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ordinality)
-          ON true
-        JOIN pg_attribute a
-          ON a.attrelid = c.conrelid
-         AND a.attnum = k.attnum
-        WHERE c.conrelid = 'public.jobs'::regclass
-          AND c.contype = 'p'
-        GROUP BY c.oid, c.conname
-      `
-    );
-
-    if (primaryKeyResult.rows.length > 1) {
-      throw new Error(
-        `Migration aborted: jobs has multiple primary key constraints`
-      );
-    }
-
-    const existingPrimaryKey = primaryKeyResult.rows[0] ?? null;
+    const existingPrimaryKey = await getPrimaryKey(client);
 
     if (existingPrimaryKey) {
       console.log(
-        `Existing primary key: ${existingPrimaryKey.conname} (${existingPrimaryKey.columns.join(
-          ', '
-        )})`
+        `Existing primary key: ${existingPrimaryKey.conname} ` +
+          `(${existingPrimaryKey.columns.join(', ')})`
       );
     } else {
       console.log('No existing primary key found on jobs');
@@ -226,16 +256,8 @@ async function migrateJobsId(): Promise<MigrationStats> {
 
     /*
      * ------------------------------------------------------------------
-     * PHASE 6: Detect external FK dependencies correctly
+     * PHASE 6: Detect external FK dependencies
      * ------------------------------------------------------------------
-     *
-     * We are specifically looking for:
-     *
-     * child_table.child_column -> jobs.id
-     *
-     * These cannot safely survive an arbitrary primary-key replacement.
-     *
-     * Self-referencing FKs are also reported separately.
      */
     const foreignKeyResult = await client.query(
       `
@@ -267,22 +289,23 @@ async function migrateJobsId(): Promise<MigrationStats> {
       const details = foreignKeyResult.rows
         .map(
           (row) =>
-            `${row.conname}: ${row.referencing_table}.${row.referencing_column} -> ${row.referenced_table}.${row.referenced_column}`
+            `${row.conname}: ` +
+            `${row.referencing_table}.${row.referencing_column} -> ` +
+            `${row.referenced_table}.${row.referenced_column}`
         )
         .join('; ');
 
       throw new Error(
         `Migration aborted: external foreign keys reference jobs.id. ` +
-          `A coordinated child-table migration is required. Dependencies: ${details}`
+          `A coordinated child-table migration is required. ` +
+          `Dependencies: ${details}`
       );
     }
 
     /*
      * ------------------------------------------------------------------
-     * PHASE 7: Validate source/source_job_id for EVERY row
+     * PHASE 7: Validate source/source_job_id
      * ------------------------------------------------------------------
-     *
-     * Do not restrict this validation to old_id rows.
      */
     const invalidSourceResult = await client.query(
       `
@@ -295,17 +318,20 @@ async function migrateJobsId(): Promise<MigrationStats> {
       `
     );
 
-    const invalidSourceCount = Number(invalidSourceResult.rows[0].count);
+    const invalidSourceCount = Number(
+      invalidSourceResult.rows[0].count
+    );
 
     if (invalidSourceCount > 0) {
       throw new Error(
-        `Migration aborted: ${invalidSourceCount} jobs have missing/blank source or source_job_id`
+        `Migration aborted: ${invalidSourceCount} jobs have ` +
+          `missing/blank source or source_job_id`
       );
     }
 
     /*
      * ------------------------------------------------------------------
-     * PHASE 8: Detect duplicate canonical IDs BEFORE modifying id
+     * PHASE 8: Detect duplicate canonical IDs
      * ------------------------------------------------------------------
      */
     const duplicateTargetResult = await client.query(
@@ -323,7 +349,10 @@ async function migrateJobsId(): Promise<MigrationStats> {
     if (duplicateTargetResult.rows.length > 0) {
       const duplicates = duplicateTargetResult.rows
         .slice(0, 20)
-        .map((row) => `${row.target_id} (${row.duplicate_count})`)
+        .map(
+          (row) =>
+            `${row.target_id} (${row.duplicate_count})`
+        )
         .join(', ');
 
       throw new Error(
@@ -345,11 +374,14 @@ async function migrateJobsId(): Promise<MigrationStats> {
       `
     );
 
-    const invalidTargetCount = Number(invalidTargetResult.rows[0].count);
+    const invalidTargetCount = Number(
+      invalidTargetResult.rows[0].count
+    );
 
     if (invalidTargetCount > 0) {
       throw new Error(
-        `Migration aborted: ${invalidTargetCount} jobs produce invalid canonical IDs`
+        `Migration aborted: ${invalidTargetCount} jobs produce ` +
+          `invalid canonical IDs`
       );
     }
 
@@ -357,9 +389,6 @@ async function migrateJobsId(): Promise<MigrationStats> {
      * ------------------------------------------------------------------
      * PHASE 10: Ensure staging column exists
      * ------------------------------------------------------------------
-     *
-     * We use a TEXT staging column to construct and validate the
-     * complete target identity before replacing the primary-key value.
      */
     const stagingColumnResult = await client.query(
       `
@@ -374,11 +403,9 @@ async function migrateJobsId(): Promise<MigrationStats> {
     const hasMigrationId = stagingColumnResult.rows.length > 0;
 
     if (hasMigrationId) {
-      /*
-       * This is a rerun after an interrupted/non-completed migration.
-       * Reuse the staging column after clearing it.
-       */
-      console.log('Existing migration_id staging column found; reusing it');
+      console.log(
+        'Existing migration_id staging column found; reusing it'
+      );
 
       await client.query(
         `UPDATE public.jobs SET migration_id = NULL`
@@ -405,13 +432,14 @@ async function migrateJobsId(): Promise<MigrationStats> {
 
     if (stagingUpdated !== rowsBefore) {
       throw new Error(
-        `Migration aborted: staging update affected ${stagingUpdated} rows, expected ${rowsBefore}`
+        `Migration aborted: staging update affected ${stagingUpdated} rows, ` +
+          `expected ${rowsBefore}`
       );
     }
 
     /*
      * ------------------------------------------------------------------
-     * PHASE 12: Validate staging IDs at database level
+     * PHASE 12: Validate staging IDs
      * ------------------------------------------------------------------
      */
     const stagingValidation = await client.query(
@@ -443,13 +471,14 @@ async function migrateJobsId(): Promise<MigrationStats> {
       throw new Error(
         `Migration aborted: staging validation failed. ` +
           `total=${stagingTotal}, populated=${stagingPopulated}, ` +
-          `unique=${stagingUnique}, invalid=${stagingInvalid}, expected=${rowsBefore}`
+          `unique=${stagingUnique}, invalid=${stagingInvalid}, ` +
+          `expected=${rowsBefore}`
       );
     }
 
     /*
      * ------------------------------------------------------------------
-     * PHASE 13: Convert id to TEXT if necessary
+     * PHASE 13: Convert id to TEXT
      * ------------------------------------------------------------------
      */
     if (idTypeBefore !== 'text') {
@@ -457,47 +486,35 @@ async function migrateJobsId(): Promise<MigrationStats> {
         `Converting jobs.id from ${idTypeBefore} to TEXT...`
       );
 
-      /*
-       * PostgreSQL can convert BIGINT -> TEXT directly.
-       * No USING expression is necessary for this direction.
-       */
       await client.query(
         `ALTER TABLE public.jobs ALTER COLUMN id TYPE TEXT`
       );
     }
 
-    /*
-     * Immediately verify the physical type after ALTER.
-     */
     const idTypeAfterAlter = await getColumnType(client, 'id');
 
     if (idTypeAfterAlter !== 'text') {
       throw new Error(
-        `Migration aborted: jobs.id physical type is '${idTypeAfterAlter}', expected 'text'`
+        `Migration aborted: jobs.id physical type is ` +
+          `'${idTypeAfterAlter}', expected 'text'`
       );
     }
 
     /*
      * ------------------------------------------------------------------
-     * PHASE 14: Remove existing PK only when necessary
+     * PHASE 14: Remove existing PK only when it is on id
      * ------------------------------------------------------------------
-     *
-     * If the existing PK is on id, it can be recreated after updating
-     * the values.
-     *
-     * If the existing PK is on another column, abort rather than
-     * destroying an unknown schema contract.
      */
     if (existingPrimaryKey) {
-      const pkColumns = existingPrimaryKey.columns as string[];
+      const pkColumns = existingPrimaryKey.columns;
 
       if (
         pkColumns.length !== 1 ||
         pkColumns[0] !== 'id'
       ) {
         throw new Error(
-          `Migration aborted: existing primary key '${existingPrimaryKey.conname}' ` +
-            `does not consist solely of jobs.id`
+          `Migration aborted: existing primary key ` +
+            `'${existingPrimaryKey.conname}' does not consist solely of jobs.id`
         );
       }
 
@@ -510,7 +527,7 @@ async function migrateJobsId(): Promise<MigrationStats> {
 
     /*
      * ------------------------------------------------------------------
-     * PHASE 15: Replace id values from staging column
+     * PHASE 15: Replace id values
      * ------------------------------------------------------------------
      */
     const idUpdateResult = await client.query(
@@ -524,13 +541,14 @@ async function migrateJobsId(): Promise<MigrationStats> {
 
     if (rowsUpdated !== rowsBefore) {
       throw new Error(
-        `Migration aborted: id update affected ${rowsUpdated} rows, expected ${rowsBefore}`
+        `Migration aborted: id update affected ${rowsUpdated} rows, ` +
+          `expected ${rowsBefore}`
       );
     }
 
     /*
      * ------------------------------------------------------------------
-     * PHASE 16: Validate id BEFORE recreating PK
+     * PHASE 16: Validate IDs before PK recreation
      * ------------------------------------------------------------------
      */
     const prePkValidation = await client.query(
@@ -564,7 +582,8 @@ async function migrateJobsId(): Promise<MigrationStats> {
       throw new Error(
         `Migration aborted: final ID validation failed before PK recreation. ` +
           `total=${prePkTotal}, nonNull=${prePkNonNull}, ` +
-          `unique=${prePkUnique}, invalid=${prePkInvalid}, expected=${rowsBefore}`
+          `unique=${prePkUnique}, invalid=${prePkInvalid}, ` +
+          `expected=${rowsBefore}`
       );
     }
 
@@ -584,11 +603,6 @@ async function migrateJobsId(): Promise<MigrationStats> {
      * ------------------------------------------------------------------
      * PHASE 18: Ensure source/source_job_id uniqueness
      * ------------------------------------------------------------------
-     *
-     * The target canonical ID is derived from these two fields.
-     * Duplicate detection above guarantees this constraint should
-     * succeed unless the schema contains an unexpected conflicting
-     * constraint.
      */
     const uniqueConstraintResult = await client.query(
       `
@@ -641,7 +655,8 @@ async function migrateJobsId(): Promise<MigrationStats> {
     ) {
       throw new Error(
         `Migration aborted: jobs.id physical type verification failed. ` +
-          `data_type=${finalIdColumn.data_type}, udt_name=${finalIdColumn.udt_name}`
+          `data_type=${finalIdColumn.data_type}, ` +
+          `udt_name=${finalIdColumn.udt_name}`
       );
     }
 
@@ -669,11 +684,14 @@ async function migrateJobsId(): Promise<MigrationStats> {
     const totalRows = Number(finalStats.total_rows);
     const uniqueIds = Number(finalStats.unique_ids);
     const nullIds = Number(finalStats.null_ids);
-    const invalidFormatIds = Number(finalStats.invalid_format_ids);
+    const invalidFormatIds = Number(
+      finalStats.invalid_format_ids
+    );
 
     if (totalRows !== rowsBefore) {
       throw new Error(
-        `Migration aborted: row count changed from ${rowsBefore} to ${totalRows}`
+        `Migration aborted: row count changed from ` +
+          `${rowsBefore} to ${totalRows}`
       );
     }
 
@@ -701,38 +719,21 @@ async function migrateJobsId(): Promise<MigrationStats> {
      * PHASE 21: Verify PK really exists on id
      * ------------------------------------------------------------------
      */
-    const finalPkResult = await client.query(
-      `
-        SELECT
-          c.conname,
-          array_agg(a.attname ORDER BY k.ordinality) AS columns
-        FROM pg_constraint c
-        JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ordinality)
-          ON true
-        JOIN pg_attribute a
-          ON a.attrelid = c.conrelid
-         AND a.attnum = k.attnum
-        WHERE c.conrelid = 'public.jobs'::regclass
-          AND c.contype = 'p'
-        GROUP BY c.oid, c.conname
-      `
-    );
+    const finalPrimaryKey = await getPrimaryKey(client);
 
-    if (finalPkResult.rows.length !== 1) {
+    if (!finalPrimaryKey) {
       throw new Error(
-        'Migration aborted: jobs does not have exactly one primary key'
+        'Migration aborted: jobs does not have a primary key'
       );
     }
 
-    const finalPkColumns = finalPkResult.rows[0].columns as string[];
-
     if (
-      finalPkColumns.length !== 1 ||
-      finalPkColumns[0] !== 'id'
+      finalPrimaryKey.columns.length !== 1 ||
+      finalPrimaryKey.columns[0] !== 'id'
     ) {
       throw new Error(
         `Migration aborted: primary key does not reference jobs.id. ` +
-          `Actual columns: ${finalPkColumns.join(', ')}`
+          `Actual columns: ${finalPrimaryKey.columns.join(', ')}`
       );
     }
 
@@ -740,8 +741,6 @@ async function migrateJobsId(): Promise<MigrationStats> {
      * ------------------------------------------------------------------
      * PHASE 22: Remove staging / legacy columns
      * ------------------------------------------------------------------
-     *
-     * These are removed only after all critical validation passes.
      */
     if (hasOldId) {
       await client.query(
@@ -755,7 +754,7 @@ async function migrateJobsId(): Promise<MigrationStats> {
 
     /*
      * ------------------------------------------------------------------
-     * PHASE 23: Verify cleanup and row count one final time
+     * PHASE 23: Final cleanup verification
      * ------------------------------------------------------------------
      */
     const cleanupCheck = await client.query(
@@ -767,13 +766,22 @@ async function migrateJobsId(): Promise<MigrationStats> {
       `
     );
 
-    const cleanupRows = Number(cleanupCheck.rows[0].total_rows);
-    const cleanupUnique = Number(cleanupCheck.rows[0].unique_ids);
+    const cleanupRows = Number(
+      cleanupCheck.rows[0].total_rows
+    );
 
-    if (cleanupRows !== rowsBefore || cleanupUnique !== rowsBefore) {
+    const cleanupUnique = Number(
+      cleanupCheck.rows[0].unique_ids
+    );
+
+    if (
+      cleanupRows !== rowsBefore ||
+      cleanupUnique !== rowsBefore
+    ) {
       throw new Error(
         `Migration aborted: cleanup validation failed. ` +
-          `rows=${cleanupRows}, unique=${cleanupUnique}, expected=${rowsBefore}`
+          `rows=${cleanupRows}, unique=${cleanupUnique}, ` +
+          `expected=${rowsBefore}`
       );
     }
 
@@ -834,7 +842,9 @@ async function migrateJobsId(): Promise<MigrationStats> {
     if (client && transactionStarted) {
       try {
         await client.query('ROLLBACK');
-        console.log('Migration transaction rolled back successfully');
+        console.log(
+          'Migration transaction rolled back successfully'
+        );
       } catch (rollbackError) {
         console.error('ROLLBACK failed:', rollbackError);
       }
@@ -863,11 +873,6 @@ export async function POST(
   try {
     const result = await migrateJobsId();
 
-    /*
-     * If migration was already complete, rowsBefore may be zero because
-     * the function exits early. Return an explicit status rather than
-     * pretending rows were updated.
-     */
     if (
       result.rowsBefore === 0 &&
       result.rowsAfter === 0 &&
@@ -894,8 +899,10 @@ export async function POST(
       updated: result.rowsUpdated,
       idTypeBefore: result.idTypeBefore,
       idTypeAfter: result.idTypeAfter,
-      legacyColumnPresentBefore: result.legacyColumnPresentBefore,
-      legacyColumnPresentAfter: result.legacyColumnPresentAfter,
+      legacyColumnPresentBefore:
+        result.legacyColumnPresentBefore,
+      legacyColumnPresentAfter:
+        result.legacyColumnPresentAfter,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -925,6 +932,7 @@ export async function GET(
   return NextResponse.json({
     status: 'Migration service ready',
     timestamp: new Date().toISOString(),
-    instructions: 'POST to execute migration with x-cron-secret header',
+    instructions:
+      'POST to execute migration with x-cron-secret header',
   });
 }
