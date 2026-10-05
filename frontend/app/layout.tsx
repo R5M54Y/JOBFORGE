@@ -3,6 +3,7 @@ import Script from 'next/script';
 import './globals.css';
 import type { Metadata } from 'next';
 import { Header } from './components/Header';
+import { Footer } from './components/Footer';
 
 export const metadata: Metadata = {
   title: siteConfig.title,
@@ -80,6 +81,8 @@ _Hasync.push(['Histats.track_hits', '']);
           src="https://pl31517511.profitableratecpmnetwork.com/0a/6f/45/0a6f45f6cd118b7b19498f9076f1a08f.js"
           strategy="afterInteractive"
         />
+        
+        <Footer />
       </body>
     </html>
   );
