@@ -94,8 +94,8 @@ export default async function JobDetailPage({ params }: Props) {
 
   const relatedJobs = await getRelatedJobs(job.id, job.category || '', 3);
   
-  // Generate canonical URL
-  const canonicalUrl = `https://remoteworkers.vercel.app/jobs/${job.id}`;
+  // Generate canonical URL using actual accessed URL (params.id can be ID or slug-id)
+  const canonicalUrl = `https://remoteworkers.vercel.app/jobs/${params.id}`;
   
   // Generate structured data
   const structuredData = generateJobPostingSchema(job, canonicalUrl);
